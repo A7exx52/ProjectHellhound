@@ -1,0 +1,46 @@
+/* Font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding&display=swap');
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Nanum Gothic Coding';
+}
+
+html, body{
+    height: 100vh;
+    width: 100vw;
+}
+
+body{
+    background-color: black;
+    line-height: 5rem;
+    font-size: 48px;
+}
+
+main{
+    padding: 40px;
+    height: 80%;
+    width: 100%;
+    overflow-y: hidden;
+    color: #c1a715;
+}
+
+footer{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: 20%;
+    width: 100%;
+    padding: 0 40px 40px 40px;
+}
+
+.menuButton{
+    color: white;
+}
+
+.menuButton:hover{
+    color: #6996ff;
+    cursor: pointer;
+}
