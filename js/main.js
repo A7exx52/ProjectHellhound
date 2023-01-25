@@ -1,6 +1,7 @@
 const MAIN_TEXTBOX = document.querySelector('main'),
       MAIN_TEXTBOX_COMP_STYLE = window.getComputedStyle(MAIN_TEXTBOX),
       MENU_MODAL = document.querySelector('#menuModal'),
+      MENU_MODAL_COMP_STYLE = window.getComputedStyle(MENU_MODAL),
       MENU_MODAL_BG = document.querySelector('#menuModalBg'),
       LOG_BUTTON = document.querySelector('#logButton'),
       OPTIONS_BUTTON = document.querySelector('#optionsButton')
@@ -59,7 +60,7 @@ function changeText(){
         animationEventsNotRunning['CHANGE_TEXT'] = false;
         if (awaitingInput){
             let cleanIntervalLoop = setInterval(function(){
-                MAIN_TEXTBOX.style.opacity = MAIN_TEXTBOX_COMP_STYLE.getPropertyValue('opacity') - 0.1; 
+                MAIN_TEXTBOX.style.opacity = parseFloat(MAIN_TEXTBOX_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
             }, 50)
             setTimeout(() => {
                 clearInterval(cleanIntervalLoop);
@@ -87,17 +88,34 @@ function changeText(){
 
 function openMenuModal(){
     MENU_MODAL_BG.style.display = 'block'
-
+    MENU_MODAL.style.display = 'flex'
+    let cleanIntervalLoop = setInterval(function(){
+        MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) + 0.1; 
+    }, 15)
+    setTimeout(() => clearInterval(cleanIntervalLoop), 150);
 }
+
+function closeMenuModal(){
+    let cleanIntervalLoop = setInterval(function(){
+        MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
+    }, 15)
+    setTimeout(() => {
+        clearInterval(cleanIntervalLoop);
+        MENU_MODAL.style.display = 'none';
+        MENU_MODAL_BG.style.display = 'none';
+    }, 150);
+}
+
+menuIsVisible = () => MENU_MODAL_COMP_STYLE.getPropertyValue('display') != "none"
 
 MAIN_TEXTBOX.addEventListener('click', () => changeText());
 
 window.addEventListener('keyup', function(e){
-    if(e.key == 'Enter') changeText() 
+    if(e.key == 'Enter' && !menuIsVisible()) changeText() 
 });
 
-LOG_BUTTON.addEventListener("click", () => {
-    openMenuModal()
-})
+LOG_BUTTON.addEventListener("click", () => openMenuModal())
+
+MENU_MODAL_BG.addEventListener("click", () => closeMenuModal())
 
 displayNextTextBlock(TEXT_SPEEDS['NORMAL'])
