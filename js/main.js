@@ -20,14 +20,14 @@ const MAIN_TEXTBOX = document.querySelector('main'),
           'SURPRISE': 0.0025,
           'SUSPENSE': 0.1,
           'SUPER SUSPENSE': 0.2
+      },
+      ANIMATIONS_STATES = {
+        'CHANGE_TEXT': 'NOT RUNNING',
+        'TOGGLE_MENU_MODAL': 'NOT RUNNING'
       };
 
 let awaitingInput = false,
     textBlockIterator = 0,
-    animationEventsNotRunning = {
-        'CHANGE_TEXT': true,
-        'OPEN_MENU_MODAL': true
-    },
     printIntervalLoop;
 
 function displayNextTextBlock(textSpeed){
@@ -55,9 +55,9 @@ function displayNextTextBlock(textSpeed){
     }, textSpeed * 1000)
 }
 
-function changeText(){
-    if(animationEventsNotRunning['CHANGE_TEXT']){
-        animationEventsNotRunning['CHANGE_TEXT'] = false;
+function cycleText(){
+    if(ANIMATIONS_STATES['CHANGE_TEXT'] == 'NOT RUNNING'){
+        ANIMATIONS_STATES['CHANGE_TEXT'] = 'RUNNING';
         if (awaitingInput){
             let cleanIntervalLoop = setInterval(function(){
                 MAIN_TEXTBOX.style.opacity = parseFloat(MAIN_TEXTBOX_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
@@ -68,7 +68,7 @@ function changeText(){
                 MAIN_TEXTBOX.style.opacity = 1;
                 displayNextTextBlock(TEXT_SPEEDS['NORMAL']);
                 awaitingInput = false;
-                animationEventsNotRunning['CHANGE_TEXT'] = true;      
+                ANIMATIONS_STATES['CHANGE_TEXT'] = 'NOT RUNNING';      
             }, 500)
         }else{
             clearInterval(printIntervalLoop)
@@ -81,41 +81,52 @@ function changeText(){
                 textBlockIterator = 0
             }
             awaitingInput = true
-            animationEventsNotRunning['CHANGE_TEXT'] = true;
+            ANIMATIONS_STATES['CHANGE_TEXT'] = 'NOT RUNNING';
         }
     }
 }
 
-function openMenuModal(){
-    MENU_MODAL_BG.style.display = 'block'
-    MENU_MODAL.style.display = 'flex'
-    let cleanIntervalLoop = setInterval(function(){
-        MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) + 0.1; 
-    }, 15)
-    setTimeout(() => clearInterval(cleanIntervalLoop), 150);
-}
-
-function closeMenuModal(){
-    let cleanIntervalLoop = setInterval(function(){
-        MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
-    }, 15)
-    setTimeout(() => {
-        clearInterval(cleanIntervalLoop);
-        MENU_MODAL.style.display = 'none';
-        MENU_MODAL_BG.style.display = 'none';
-    }, 150);
+function toggleMenuModal(){
+    if(ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] == 'NOT RUNNING'){
+        ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'RUNNING'
+        if(MENU_MODAL_COMP_STYLE.getPropertyValue('display') == 'none'){
+            MENU_MODAL_BG.style.display = 'block'
+            MENU_MODAL.style.display = 'flex'
+            let cleanIntervalLoop = setInterval(function(){
+                MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) + 0.1; 
+            }, 15)
+            setTimeout(() => {
+                clearInterval(cleanIntervalLoop)
+                ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'NOT RUNNING'
+            }, 150);
+        }else{
+            let cleanIntervalLoop = setInterval(function(){
+                MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
+            }, 15)
+            setTimeout(() => {
+                clearInterval(cleanIntervalLoop);
+                MENU_MODAL.style.display = 'none';
+                MENU_MODAL_BG.style.display = 'none';
+                ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'NOT RUNNING'
+            }, 150);
+        }
+    }
 }
 
 menuIsVisible = () => MENU_MODAL_COMP_STYLE.getPropertyValue('display') != "none"
 
-MAIN_TEXTBOX.addEventListener('click', () => changeText());
+MAIN_TEXTBOX.addEventListener('click', () => cycleText());
 
 window.addEventListener('keyup', function(e){
-    if(e.key == 'Enter' && !menuIsVisible()) changeText() 
+
+    if((e.key == 'Enter' || e.key == ' ') && !menuIsVisible()) cycleText() 
+
+    else if(e.key == 'l' || e.key == 'o') toggleMenuModal()
+
 });
 
-LOG_BUTTON.addEventListener("click", () => openMenuModal())
+LOG_BUTTON.addEventListener("click", () => toggleMenuModal())
 
-MENU_MODAL_BG.addEventListener("click", () => closeMenuModal())
+MENU_MODAL_BG.addEventListener("click", () => toggleMenuModal())
 
 displayNextTextBlock(TEXT_SPEEDS['NORMAL'])
