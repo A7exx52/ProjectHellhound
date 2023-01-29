@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,6 +10,7 @@
     <!-- CSS -->
     <link rel="stylesheet" href="style/index.css">
 </head>
+
 <body>
     <div id="menuModalBg"></div>
     <div id="menuModal">
@@ -18,13 +20,43 @@
         <div id="modalMain">
             Some text goes here.
         </div>
-        <div id="modalFooter">
-            Change pages.
-        </div>
     </div>
     <main>
         <div id="textSection"></div>
-        <div id="nameSection">____________________</div>
+        <div type="text" id="nameSection">
+            <div id="namesContainer">
+                <div class="nameSectionColumn">
+                    <div class="sectionTitle">First Name:</div>
+                    <div class="sectionTitle">Last Name:</div>
+                </div>
+                <div class="nameSectionColumn">
+                    <div id="firstNameInput" class="nameInput">
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                    </div>
+                    <div div="lastNameInput" class="nameInput">
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter">&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
     <footer>
         <div id="inventoryButton" class="menuButton">
@@ -39,4 +71,5 @@
     </footer>
     <script src="js/main.js"></script>
 </body>
+
 </html>

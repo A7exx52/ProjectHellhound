@@ -5,7 +5,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Nanum Gothic Coding';
+    font-family: 'Nanum Gothic Coding';/
 }
 
 /* ============ Scrollbar ============ */
@@ -45,6 +45,7 @@ body{
 /* ========== Main Section =========== */
 main{
     display: flex;
+    flex-direction: column;
     padding: 40px;
     height: 80%;
     width: 100%;
@@ -54,13 +55,40 @@ main{
     width: 100%;
     height: 100%;
 }
+/* =================================== */
+
+
+/* ========= Naming Section ========== */
 #nameSection{
     display: none;
-    font-size: 3rem;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    font-size: 2.5rem;
+    padding: 0 10rem;
     width: 100%;
     height: 40%;
 }
+#namesContainer{
+    display: flex;
+    gap: 2rem;
+}
+.nameSectionColumn{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.nameInput{
+    display: flex;
+    gap: 0.2rem;
+}
+.nameLetter{
+    padding: 0;
+    margin: 0;
+    border-bottom: solid #c1a715 0.2rem;
+}
 /* =================================== */
+
 
 footer{
     display: flex;
@@ -124,11 +152,6 @@ footer{
     padding: 1rem;
     font-size: 1.5rem;
     border: solid gray 1px;
-    height: 80%;
-}
-#modalFooter{
-    justify-content: center;
-    align-items: center;
-    height: 10%;
+    height: 90%;
 }
 /* =================================== */

@@ -6,7 +6,6 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
       MENU_MODAL_COMP_STYLE = window.getComputedStyle(MENU_MODAL),
       MENU_MODAL_HEADER = MENU_MODAL.querySelector('#modalHeader'),
       MENU_MODAL_MAIN = MENU_MODAL.querySelector("#modalMain"),
-      MENU_MODAL_FOOTER = MENU_MODAL.querySelector("#modalFooter")
 
       LOG_BUTTON = document.querySelector('#logButton'),
       OPTIONS_BUTTON = document.querySelector('#optionsButton'),
@@ -21,7 +20,6 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
             ["Well, then, detective, you remember very well how it started, don't you? It was a night of stormy weather, when that case reached your hands..."],
             ['"Where in the name of everything holy does that much rain come from?!"', 'You were sitting on your table, mindlessly checking the notes of the last case you solved, when you heard your boss, the tall, slightly overweight, gray-haired commissioner Edmund "Mundie" Dunkirk, complain for the Nth time in just the last forty minutes.']
       ],
-      LOG = [],
 
       TEXT_SPEEDS = {
           'NORMAL': 0.055,
@@ -36,7 +34,9 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
 
 let awaitingInput = false,
     textBlockIterator = 0,
-    textAnimationLoop;
+    textAnimationLoop,
+    logText = '',
+    currentEvent = 'NORMAL';
 
 function displayNextTextBlock(textSpeed){
     let textCharIterator = 0,
@@ -55,7 +55,11 @@ function displayNextTextBlock(textSpeed){
         }else{
             clearInterval(textAnimationLoop)
             awaitingInput = true;
-            LOG.push(SCRIPT[textBlockIterator])
+            logText += "<span>" + SCRIPT[textBlockIterator][0]
+            for (let currentLine = 1; currentLine < SCRIPT[textBlockIterator].length; currentLine++){
+                logText += '<br>' + SCRIPT[textBlockIterator][currentLine] 
+            }
+            logText += '</span>'
             textBlockIterator += 1;
             if(textBlockIterator == SCRIPT.length){
                 textBlockIterator = 0;
@@ -82,10 +86,12 @@ function changeMainTextState(){
         }else{
             clearInterval(textAnimationLoop)
             MAIN_TEXTSECTION.innerHTML = SCRIPT[textBlockIterator][0]
+            logText += "<span>" + SCRIPT[textBlockIterator][0]
             for (let currentLine = 1; currentLine < SCRIPT[textBlockIterator].length; currentLine++){
-                MAIN_TEXTSECTION.innerHTML += '<br>' + SCRIPT[textBlockIterator][currentLine] 
+                MAIN_TEXTSECTION.innerHTML += '<br>' + SCRIPT[textBlockIterator][currentLine]
+                logText += '<br>' + SCRIPT[textBlockIterator][currentLine] 
             }
-            LOG.push(SCRIPT[textBlockIterator])
+            logText += '</span>'
             textBlockIterator += 1
             if(textBlockIterator == SCRIPT.length){
                 textBlockIterator = 0
@@ -104,17 +110,9 @@ function toggleMenuModal(menuType = null){
                 case "LOG":
                     MENU_MODAL_HEADER.innerHTML = 'Log';
                     MENU_MODAL_MAIN.innerHTML = '';
-                    MENU_MODAL_FOOTER.innerHTML = '';
-                    if (LOG.length >= 1){
-                        for (let currentBlock = 0; currentBlock < LOG.length; currentBlock++){
-                            MENU_MODAL_MAIN.innerHTML += '<span>'
-                            for (let currentLine = 0; currentLine < LOG[currentBlock].length; currentLine++){
-                                MENU_MODAL_MAIN.innerHTML += LOG[currentBlock][currentLine] + "<br>"
-                            }
-                            MENU_MODAL_MAIN.innerHTML += "</span>"
-                        }
+                    if (logText.length >= 1){
+                        MENU_MODAL_MAIN.innerHTML = logText
                         MENU_MODAL_MAIN.style.overflowY = "scroll";
-                        MENU_MODAL_MAIN.scrollTop = MENU_MODAL_MAIN.scrollHeight - 1
                     }
                     else{
                         MENU_MODAL_MAIN.innerHTML = '';
@@ -162,11 +160,17 @@ window.addEventListener('keyup', function(e){
         break;
 
         case 'l':
+        case 'L':
             toggleMenuModal('LOG')
         break;
 
         case 'o':
+        case 'O':
             toggleMenuModal('OPTIONS')
+        break;
+
+        case 'Escape':
+            if(menuIsVisible()) toggleMenuModal()
         break;
 
     }
