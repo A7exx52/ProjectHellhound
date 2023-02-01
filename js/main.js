@@ -10,101 +10,78 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
       LOG_BUTTON = document.querySelector('#logButton'),
       OPTIONS_BUTTON = document.querySelector('#optionsButton'),
 
-      SCRIPT = [
-            ["Well, hello, mister detective."], 
-            ["How have you been?"], 
-            ["You've had quite the ordeal lately haven't you?", "It makes for quite an excellent story."], 
-            ["Shall we reminisce about it together?"], 
-            ["The tale of that time where the supernatural workings of the underworld came in contact with the life of the ace detective, whose name was..."],
-            ["...Michael Crowley, was it? A nice name like that."], 
-            ["Well, then, detective, you remember very well how it started, don't you? It was a night of stormy weather, when that case reached your hands..."],
-            ['"Where in the name of everything holy does that much rain come from?!"', 'You were sitting on your table, mindlessly checking the notes of the last case you solved, when you heard your boss, the tall, slightly overweight, gray-haired commissioner Edmund "Mundie" Dunkirk, complain for the Nth time in just the last forty minutes.']
-      ],
-
       TEXT_SPEEDS = {
           'NORMAL': 0.055,
+          'NAME': 0.055,
           'SURPRISE': 0.0025,
           'SUSPENSE': 0.1,
           'SUPER SUSPENSE': 0.2
-      },
-      ANIMATIONS_STATES = {
-        'CHANGE_TEXT': 'NOT RUNNING',
-        'TOGGLE_MENU_MODAL': 'NOT RUNNING'
       };
 
 let awaitingInput = false,
-    textBlockIterator = 0,
-    textAnimationLoop,
+    eventIterator = -1,
     logText = '',
-    currentEvent = 'NORMAL';
+    currentEvent = 'NORMAL',
+    currentTextBlock = '',
+    currentGameState = 'READING_TEXT';
 
-function displayNextTextBlock(textSpeed){
-    let textCharIterator = 0,
-        textLineIterator = 0;
-    textAnimationLoop = setInterval(() => {
-        if(textLineIterator < SCRIPT[textBlockIterator].length){
-            if(textCharIterator < SCRIPT[textBlockIterator][textLineIterator].length){
-                MAIN_TEXTSECTION.innerHTML += SCRIPT[textBlockIterator][textLineIterator][textCharIterator]
-                textCharIterator++;
-            }
-            else{
-                textLineIterator++;
-                textCharIterator = 0;
-                MAIN_TEXTSECTION.innerHTML += "<br>"
-            }
-        }else{
-            clearInterval(textAnimationLoop)
-            awaitingInput = true;
-            logText += "<span>" + SCRIPT[textBlockIterator][0]
-            for (let currentLine = 1; currentLine < SCRIPT[textBlockIterator].length; currentLine++){
-                logText += '<br>' + SCRIPT[textBlockIterator][currentLine] 
-            }
-            logText += '</span>'
-            textBlockIterator += 1;
-            if(textBlockIterator == SCRIPT.length){
-                textBlockIterator = 0;
-            }
-        }
-    }, textSpeed * 1000)
+function startNextEvent(){
+    eventIterator += 1
+    if(eventIterator == SCRIPT.length){
+        eventIterator = 0
+    }
+    currentEvent = SCRIPT[eventIterator]['EVENT']
+    currentTextBlock = SCRIPT[eventIterator]['TEXT']
+
+    switch(currentEvent){
+
+        case 'NORMAL': 
+            displayNextText(); 
+        break;
+
+        case 'NAME':
+            displayNextText();
+        break
+
+    }
+
 }
 
-function changeMainTextState(){
-    if(ANIMATIONS_STATES['CHANGE_TEXT'] == 'NOT RUNNING'){
-        ANIMATIONS_STATES['CHANGE_TEXT'] = 'RUNNING';
-        if (awaitingInput){
-            let cleanIntervalLoop = setInterval(function(){
-                MAIN_TEXTSECTION.style.opacity = parseFloat(MAIN_TEXTSECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
-            }, 50)
-            setTimeout(() => {
-                clearInterval(cleanIntervalLoop);
+function skipText(){
+    if(!awaitingInput){
+        if(ANIMATIONS['DISPLAY_TEXT']['STATE'] == 'RUNNING'){
+            clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
+            MAIN_TEXTSECTION.innerHTML = currentTextBlock.join('<br>')
+            logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
+            ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING';
+        }
+        else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING'){
+            ANIMATIONS['CLEAR_TEXT']['STATE'] = 'RUNNING'
+            ANIMATIONS['CLEAR_TEXT']['LOOP'] = setInterval(() => 
+                MAIN_TEXTSECTION.style.opacity = parseFloat(MAIN_TEXTSECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1
+            , 50)
+            ANIMATIONS['CLEAR_TEXT']['CALLBACK'] = setTimeout(() => {
+                clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP']);
                 MAIN_TEXTSECTION.innerHTML= '';
                 MAIN_TEXTSECTION.style.opacity = 1;
-                displayNextTextBlock(TEXT_SPEEDS['NORMAL']);
-                awaitingInput = false;
-                ANIMATIONS_STATES['CHANGE_TEXT'] = 'NOT RUNNING';      
+                ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
+                startNextEvent();
             }, 500)
-        }else{
-            clearInterval(textAnimationLoop)
-            MAIN_TEXTSECTION.innerHTML = SCRIPT[textBlockIterator][0]
-            logText += "<span>" + SCRIPT[textBlockIterator][0]
-            for (let currentLine = 1; currentLine < SCRIPT[textBlockIterator].length; currentLine++){
-                MAIN_TEXTSECTION.innerHTML += '<br>' + SCRIPT[textBlockIterator][currentLine]
-                logText += '<br>' + SCRIPT[textBlockIterator][currentLine] 
-            }
-            logText += '</span>'
-            textBlockIterator += 1
-            if(textBlockIterator == SCRIPT.length){
-                textBlockIterator = 0
-            }
-            awaitingInput = true
-            ANIMATIONS_STATES['CHANGE_TEXT'] = 'NOT RUNNING';
+        } 
+        else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'RUNNING'){
+            clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP'])
+            clearTimeout(ANIMATIONS['CLEAR_TEXT']['CALLBACK'])
+            ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
+            MAIN_TEXTSECTION.innerHTML= '';
+            MAIN_TEXTSECTION.style.opacity = 1;
+            startNextEvent();
         }
     }
 }
 
 function toggleMenuModal(menuType = null){
-    if(ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] == 'NOT RUNNING'){
-        ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'RUNNING'
+    if(ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] == 'NOT RUNNING'){
+        ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'RUNNING'
         if(MENU_MODAL_COMP_STYLE.getPropertyValue('display') == 'none'){
             switch(menuType){
                 case "LOG":
@@ -130,7 +107,7 @@ function toggleMenuModal(menuType = null){
             }, 15)
             setTimeout(() => {
                 clearInterval(cleanIntervalLoop)
-                ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'NOT RUNNING'
+                ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'NOT RUNNING'
             }, 150);
         }else{
             let cleanIntervalLoop = setInterval(function(){
@@ -140,15 +117,38 @@ function toggleMenuModal(menuType = null){
                 clearInterval(cleanIntervalLoop);
                 MENU_MODAL.style.display = 'none';
                 MENU_MODAL_BG.style.display = 'none';
-                ANIMATIONS_STATES['TOGGLE_MENU_MODAL'] = 'NOT RUNNING'
+                ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'NOT RUNNING'
             }, 150);
         }
     }
 }
 
+function displayNextText(){
+    ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'RUNNING'
+    let textCharIterator = 0,
+    textLineIterator = 0;
+    ANIMATIONS['DISPLAY_TEXT']['LOOP'] = setInterval(() => {
+        if(textLineIterator < currentTextBlock.length){
+            if(textCharIterator < currentTextBlock[textLineIterator].length){
+                MAIN_TEXTSECTION.innerHTML += currentTextBlock[textLineIterator][textCharIterator]
+                textCharIterator++;
+            }
+            else{
+                textLineIterator++;
+                textCharIterator = 0;
+                MAIN_TEXTSECTION.innerHTML += "<br>"
+            }
+        }else{
+            clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
+            logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
+            ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING'
+        }
+    }, TEXT_SPEEDS[currentEvent] * 1000)
+}
+
 menuIsVisible = () => MENU_MODAL_COMP_STYLE.getPropertyValue('display') != "none"
 
-MAIN_TEXTSECTION.addEventListener('click', () => changeMainTextState());
+MAIN_TEXTSECTION.addEventListener('click', () => skipText());
 
 window.addEventListener('keyup', function(e){
 
@@ -156,7 +156,7 @@ window.addEventListener('keyup', function(e){
 
         case 'Enter':
         case ' ':
-            if (!menuIsVisible()) changeMainTextState()
+            if (!menuIsVisible()) skipText()
         break;
 
         case 'l':
@@ -177,10 +177,23 @@ window.addEventListener('keyup', function(e){
 
 });
 
+window.addEventListener('keydown', function(e){
+
+    switch(e.key){
+
+        case 's':
+        case 'S':
+            if (!menuIsVisible()) skipText()
+        break;
+
+    }
+
+});
+
 LOG_BUTTON.addEventListener("click", () => toggleMenuModal('LOG'))
 
 OPTIONS_BUTTON.addEventListener("click", () => toggleMenuModal('LOG'))
 
 MENU_MODAL_BG.addEventListener("click", () => toggleMenuModal())
 
-displayNextTextBlock(TEXT_SPEEDS['NORMAL'])
+startNextEvent()
