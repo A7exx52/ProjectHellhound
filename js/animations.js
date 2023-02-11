@@ -13,5 +13,15 @@ ANIMATIONS = {
         'STATE': 'NOT RUNNING',
         'LOOP': null,
         'CALLBACK': null
+    },
+    'DISPLAY_NAME_SECTION': {
+        'STATE': 'NOT RUNNING',
+        'LOOP': null,
+        'CALLBACK': null
+    },
+    'NAME_TYPING_CURSOR': {
+        'STATE': 'NOT RUNNING',
+        'LOOP': null,
+        'CALLBACK': null
     }
 }

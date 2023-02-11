@@ -61,6 +61,7 @@ main{
 /* ========= Naming Section ========== */
 #nameSection{
     display: none;
+    opacity: 0;
     justify-content: center;
     align-items: center;
     gap: 2rem;
@@ -86,6 +87,7 @@ main{
     padding: 0;
     margin: 0;
     border-bottom: solid #c1a715 0.2rem;
+    border-left: solid black 1px;
 }
 /* =================================== */
 
@@ -100,19 +102,23 @@ footer{
 }
 
 
-/* ========== Menu Buttons =========== */
+/* ============ Buttons ============= */
+button{
+    background-color: rgba(0, 0, 0, 0);
+    font-size: inherit;
+}
 .menuButton{
     color: white;
 }
-.menuButton:hover{
+.menuButton:hover, .menuButton:focus{
     color: #6996ff;
     cursor: pointer;
 }
 /* =================================== */
 
 
-/* ========== Menus Modal ============ */
-#menuModalBg{
+/* ============= Modals ============== */
+#modalBg{
     display: none;
     height: 100vh;
     width: 100vw;
@@ -120,6 +126,7 @@ footer{
     z-index: 1;
     position: absolute;
 }
+
 #menuModal{
     display: none;
     position: absolute;
@@ -139,12 +146,12 @@ footer{
     display: flex;
     width: 100%;
 }
-#modalHeader{
+#menuModalHeader{
     justify-content: center;
     align-items: center;
     height: 10%;
 }
-#modalMain{
+#menuModalMain{
     display: flex;
     flex-direction: column;
     gap: .75rem;
@@ -153,5 +160,23 @@ footer{
     font-size: 1.5rem;
     border: solid gray 1px;
     height: 90%;
+}
+
+#confirmModal{
+    display: none;
+    position: absolute;
+    background-color: black;
+    opacity: 1;
+    color: white;
+    border: solid white 3px;
+    border-radius: 20px;
+    height: 30%;
+    width: 40%;
+    z-index: 2;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    gap: 1.5rem;
+    font-size: 1.5rem;
 }
 /* =================================== */

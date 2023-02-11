@@ -12,13 +12,22 @@
 </head>
 
 <body>
-    <div id="menuModalBg"></div>
+    <div id="modalBg"></div>
     <div id="menuModal">
-        <div id="modalHeader">
+        <div id="menuModalHeader">
             Test
         </div>
-        <div id="modalMain">
+        <div id="menuModalMain">
             Some text goes here.
+        </div>
+    </div>
+    <div id="confirmModal">
+        <div id="confirmModalHeader">
+            "Henry Stickman", is that your true name?
+        </div>
+        <div id="confirmModalMain">
+            <button>Yes</button>
+            <button>No</button>
         </div>
     </div>
     <main>
@@ -26,48 +35,48 @@
         <div type="text" id="nameSection">
             <div id="namesContainer">
                 <div class="nameSectionColumn">
-                    <div class="sectionTitle">First Name:</div>
-                    <div class="sectionTitle">Last Name:</div>
+                    <div class="sectionTitle">Your First Name:</div>
+                    <div class="sectionTitle">Your Last Name:</div>
                 </div>
                 <div class="nameSectionColumn">
                     <div id="firstNameInput" class="nameInput">
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter0">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter1">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter2">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter3">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter4">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter5">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter6">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter7">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter8">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter9">&nbsp;</span>
                     </div>
                     <div div="lastNameInput" class="nameInput">
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
-                        <span class="nameLetter">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter10">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter11">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter12">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter13">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter14">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter15">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter16">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter17">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter18">&nbsp;</span>
+                        <span class="nameLetter" id="nameLetter19">&nbsp;</span>
                     </div>
                 </div>
             </div>
         </div>
     </main>
     <footer>
-        <div id="inventoryButton" class="menuButton">
+        <button id="inventoryButton" class="menuButton">
             Inventory
-        </div>
-        <div id="logButton" class="menuButton">
+        </button>
+        <button id="logButton" class="menuButton">
             Log
-        </div>
-        <div id="optionsButton" class="menuButton">
+        </button>
+        <button id="optionsButton" class="menuButton">
             Options
-        </div>
+        </button>
     </footer>
     <script src="js/script.js"></script>
     <script src="js/animations.js"></script>
