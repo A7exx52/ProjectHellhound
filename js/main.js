@@ -1,9 +1,10 @@
-const MAIN_TEXTSECTION = document.querySelector('#textSection'),
-    MAIN_TEXTSECTION_COMP_STYLE = window.getComputedStyle(MAIN_TEXTSECTION),
+const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
+    MAIN_TEXT_SECTION_COMP_STYLE = window.getComputedStyle(MAIN_TEXT_SECTION),
 
-    NAME_SECTION = document.querySelector('#nameSection'),
-    NAME_SECTION_COMP_STYLE = window.getComputedStyle(NAME_SECTION),
+    INPUT_SECTION = document.querySelector('#inputSection'),
+    INPUT_SECTION_COMP_STYLE = window.getComputedStyle(INPUT_SECTION),
     NAME_LETTERS_ELEMENTS = [],
+    CHOICE_BUTTONS = [],
 
     MODAL_BG = document.querySelector('#modalBg'),
     MODALS = {
@@ -31,12 +32,20 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
     TEXT_SPEEDS = {
         'NORMAL': 0.055,
         'NAME': 0.055,
+        'CHOICE': 0.055,
+        'AFTER_CHOICE': 0.055,
         'SURPRISE': 0.0025,
         'SUSPENSE': 0.1,
         'SUPER SUSPENSE': 0.2
     };
 
 for(let currentLetter = 0; currentLetter < 20; currentLetter++) NAME_LETTERS_ELEMENTS.push(document.querySelector('#nameLetter' + currentLetter))
+for(let currentButton = 1; currentButton < 5; currentButton++){
+    CHOICE_BUTTONS.push({
+        'ELEMENT': document.querySelector('#choiceButton' + currentButton),
+        'COMPSTYLE': window.getComputedStyle(document.querySelector('#choiceButton' + currentButton))
+    })
+}
 
 let awaitingInput = false,
     logText = '',
@@ -45,7 +54,8 @@ let awaitingInput = false,
     currentTextBlock = '',
     currentCursorPosition = 0,
     playerName = [null, null],
-    modalActive = null;
+    modalActive = null,
+    currentChoice = null;
 
 function startNextEvent(){
     eventIterator += 1
@@ -53,47 +63,53 @@ function startNextEvent(){
         eventIterator = 0
     }
     currentEvent = SCRIPT[eventIterator]['EVENT']
-    currentTextBlock = SCRIPT[eventIterator]['TEXT']
-
-    switch(currentEvent){
-
-        case 'NORMAL': 
-            displayNextText(); 
-        break;
-
-        case 'NAME':
-            displayNextText();
-        break
-
+    if(eventIterator > 0){
+        if(SCRIPT[eventIterator - 1]['EVENT'] == 'CHOICE'){
+            currentTextBlock = SCRIPT[eventIterator]['TEXT'][currentChoice]
+        }
+        else currentTextBlock = SCRIPT[eventIterator]['TEXT']
     }
+    else currentTextBlock = SCRIPT[eventIterator]['TEXT']
+
+    displayNextText();
 
 }
 
 function endCurrentEvent(){
-    switch(currentEvent){
 
-        case 'NAME':
-            awaitingInput = true
-            NAME_SECTION.style.display = 'flex'
-            ANIMATIONS['DISPLAY_NAME_SECTION']['STATE'] = 'RUNNING'
-            ANIMATIONS['DISPLAY_NAME_SECTION']['LOOP'] = setInterval(() =>
-                NAME_SECTION.style.opacity = parseFloat(NAME_SECTION_COMP_STYLE.getPropertyValue('opacity')) + 0.1
-            , 20)
-            ANIMATIONS['DISPLAY_NAME_SECTION']['CALLBACK'] = setTimeout(() => {
-                clearInterval(ANIMATIONS['DISPLAY_NAME_SECTION']['LOOP']);
-                NAME_SECTION.style.opacity = 1;
-                ANIMATIONS['DISPLAY_NAME_SECTION']['STATE'] = 'NOT RUNNING';
-                ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'RUNNING'
-                ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'] = setInterval(() => {
-                    if(currentCursorPosition < 20){
-                        toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition], "left")
-                    }else{
-                        toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition - 1], "right")
-                    }
-                }, 400)
-            }, 200)
-        break;
-
+    if(currentEvent == 'NAME' || currentEvent == 'CHOICE'){
+        awaitingInput = true
+        if(currentEvent == 'CHOICE'){
+            SCRIPT[eventIterator]['CHOICES'].forEach((choice, index) => {
+                CHOICE_BUTTONS[index]['ELEMENT'].innerHTML = choice
+                CHOICE_BUTTONS[index]['ELEMENT'].style.display = 'flex'
+            })
+            INPUT_SECTION.style.flexDirection = 'column'
+            INPUT_SECTION.style.justifyContent = 'flex-start'
+            INPUT_SECTION.style.alignItems = 'flex-start'
+        }
+        INPUT_SECTION.style.display = 'flex'
+        ANIMATIONS['DISPLAY_INPUT_SECTION']['STATE'] = 'RUNNING'
+        ANIMATIONS['DISPLAY_INPUT_SECTION']['LOOP'] = setInterval(() =>
+            INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) + 0.1
+        , 20)
+        ANIMATIONS['DISPLAY_INPUT_SECTION']['CALLBACK'] = setTimeout(() => {
+            clearInterval(ANIMATIONS['DISPLAY_INPUT_SECTION']['LOOP']);
+            INPUT_SECTION.style.opacity = 1;
+            ANIMATIONS['DISPLAY_INPUT_SECTION']['STATE'] = 'NOT RUNNING';
+            switch(currentEvent){
+                case 'NAME':
+                    ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'RUNNING'
+                    ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'] = setInterval(() => {
+                        if(currentCursorPosition < 20){
+                            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition], "left")
+                        }else{
+                            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition - 1], "right")
+                        }
+                    }, 400)
+                break;
+            }
+        }, 200)
     }
 }
 
@@ -104,32 +120,39 @@ function skipText(){
         // Checks if letters are being draw
         if(ANIMATIONS['DISPLAY_TEXT']['STATE'] == 'RUNNING'){
             clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
-            MAIN_TEXTSECTION.innerHTML = currentTextBlock.join('<br>')
+            MAIN_TEXT_SECTION.innerHTML = currentTextBlock.join('<br>')
             logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
             ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING';
             endCurrentEvent()
         }
+
         // Checks if text is already full shown
         else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING'){
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'RUNNING'
-            ANIMATIONS['CLEAR_TEXT']['LOOP'] = setInterval(() => 
-                MAIN_TEXTSECTION.style.opacity = parseFloat(MAIN_TEXTSECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1
-            , 50)
+            ANIMATIONS['CLEAR_TEXT']['LOOP'] = setInterval(() => {
+                if(currentEvent == 'CHOICE') INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;    
+                MAIN_TEXT_SECTION.style.opacity = parseFloat(MAIN_TEXT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;
+            }, 50)
             ANIMATIONS['CLEAR_TEXT']['CALLBACK'] = setTimeout(() => {
                 clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP']);
-                MAIN_TEXTSECTION.innerHTML= '';
-                MAIN_TEXTSECTION.style.opacity = 1;
+                if(currentEvent == 'CHOICE'){ 
+                    INPUT_SECTION.style.opacity = 0.1;
+                    INPUT_SECTION.style.display = 'none';
+                }
+                MAIN_TEXT_SECTION.innerHTML= '';
+                MAIN_TEXT_SECTION.style.opacity = 1;
                 ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
                 startNextEvent();
             }, 500)
-        } 
+        }
+
         // Checks if text is fading out
         else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'RUNNING'){
             clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP'])
             clearTimeout(ANIMATIONS['CLEAR_TEXT']['CALLBACK'])
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
-            MAIN_TEXTSECTION.innerHTML= '';
-            MAIN_TEXTSECTION.style.opacity = 1;
+            MAIN_TEXT_SECTION.innerHTML= '';
+            MAIN_TEXT_SECTION.style.opacity = 1;
             startNextEvent();
         }
     }
@@ -203,13 +226,13 @@ function displayNextText(){
     ANIMATIONS['DISPLAY_TEXT']['LOOP'] = setInterval(() => {
         if(textLineIterator < currentTextBlock.length){
             if(textCharIterator < currentTextBlock[textLineIterator].length){
-                MAIN_TEXTSECTION.innerHTML += currentTextBlock[textLineIterator][textCharIterator]
+                MAIN_TEXT_SECTION.innerHTML += currentTextBlock[textLineIterator][textCharIterator]
                 textCharIterator++;
             }
             else{
                 textLineIterator++;
                 textCharIterator = 0;
-                MAIN_TEXTSECTION.innerHTML += "<br>"
+                MAIN_TEXT_SECTION.innerHTML += "<br>"
             }
         }else{
             clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
@@ -218,25 +241,6 @@ function displayNextText(){
             endCurrentEvent()
         }
     }, TEXT_SPEEDS[currentEvent] * 1000)
-}
-
-function confirmPlayerName(){
-
-    let currentLetterNumber = 0;
-    playerName = Array.from(document.querySelectorAll('.nameLetter'))
-        .reduce((prevVal, currVal, index) => {
-            if(index == 1) prevVal = prevVal.innerHTML
-            if(index == 10) prevVal += '&'
-            return prevVal + currVal.innerHTML.replace('&nbsp;', ' ').trim()
-        })
-        .split('&')
-        .map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
-    
-    if(playerName[0].length > 0 && playerName[1].length > 0){
-        MODALS['CONFIRM']['HEADER'].innerHTML = '"' + playerName[0] + ' ' + playerName[1] + '", is that your true name?'
-        toggleModal('CONFIRM')
-        MODALS['CONFIRM']['BUTTONS']['NO'].focus()
-    }
 }
 
 function changeCurrentLetter(keyPressed){
@@ -337,7 +341,7 @@ anyOtherModalIsVisible = modalType => Object.keys(MODALS).reduce((prevVal, currV
     return false
 })
 
-MAIN_TEXTSECTION.addEventListener('click', () => skipText());
+MAIN_TEXT_SECTION.addEventListener('click', () => skipText());
 
 window.addEventListener('keyup', function(e){
 
@@ -351,7 +355,21 @@ window.addEventListener('keyup', function(e){
                 if(awaitingInput == true){
                     if(e.key == "Enter"){
                         if(currentCursorPosition > 9){
-                            if (!anyModalIsVisible()) confirmPlayerName()
+                            if (!anyModalIsVisible()){
+                                playerName = Array.from(document.querySelectorAll('.nameLetter'))
+                                    .reduce((prevVal, currVal, index) => {
+                                        if(index == 1) prevVal = prevVal.innerHTML
+                                        if(index == 10) prevVal += '&'
+                                        return prevVal + currVal.innerHTML.replace('&nbsp;', ' ').trim()
+                                    })
+                                    .split('&')
+                                    .map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
+                                
+                                if(playerName[0].length > 0 && playerName[1].length > 0){
+                                    MODALS['CONFIRM']['HEADER'].innerHTML = '"' + playerName[0] + ' ' + playerName[1] + '", is that your true name?'
+                                    toggleModal('CONFIRM')
+                                }
+                            }
                         } else if(currentCursorPosition < 10){
                             let cursorPositionVerifier = 19
                             do{
@@ -423,17 +441,34 @@ MODAL_BG.addEventListener("click", () => toggleModal(modalActive))
 MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
     switch(currentEvent){
         case "NAME":
-            SCRIPT = SCRIPT.map(event => {
+            SCRIPT = SCRIPT.map((event, index) => {
+
                 event['TEXT'] = event['TEXT'].map(text => {
-                    if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
-                    if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
+                    if(index > 0){
+                        if(SCRIPT[index - 1]['EVENT'] == 'CHOICE'){
+                            text = text.map(choiceText => {
+                                if(choiceText.includes('playerName0')) choiceText = choiceText.replace('playerName0', playerName[0])
+                                if(choiceText.includes('playerName1')) choiceText = choiceText.replace('playerName1', playerName[1]) 
+                                return choiceText       
+                            })
+                        }else{
+                            if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
+                            if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
+                        }
+                    }
+                    else{
+                        if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
+                        if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
+                    }
                     return text
                 })
                 return event
             })
             clearInterval(ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'])
             ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'NOT RUNNING'
-            NAME_SECTION.style.display = "none"
+            INPUT_SECTION.style.display = "none"
+            INPUT_SECTION.style.opacity = 0.1
+            Array.from(document.querySelectorAll('.nameSectionColumn')).forEach(section => section.remove())
             toggleModal('CONFIRM')
             awaitingInput = false
             skipText()
@@ -447,6 +482,19 @@ MODALS['CONFIRM']['BUTTONS']['NO'].addEventListener("click", () => {
             toggleModal('CONFIRM')
         break;
     }
+})
+
+CHOICE_BUTTONS.forEach((buttonClicked, indexClickedButton) => {
+    buttonClicked['ELEMENT'].addEventListener('click', () =>{
+        awaitingInput = false;
+        currentChoice = indexClickedButton
+        CHOICE_BUTTONS.forEach((button, index) => {
+            if(index != indexClickedButton){
+                button['ELEMENT'].style.display = 'none'
+            }
+        })
+        skipText()
+    })
 })
 
 startNextEvent()

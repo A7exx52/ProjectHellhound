@@ -14,7 +14,12 @@ ANIMATIONS = {
         'LOOP': null,
         'CALLBACK': null
     },
-    'DISPLAY_NAME_SECTION': {
+    'DISPLAY_INPUT_SECTION': {
+        'STATE': 'NOT RUNNING',
+        'LOOP': null,
+        'CALLBACK': null
+    },
+    'HIDE_INPUT_SECTION': {
         'STATE': 'NOT RUNNING',
         'LOOP': null,
         'CALLBACK': null
