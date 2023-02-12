@@ -3,19 +3,27 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
 
     NAME_SECTION = document.querySelector('#nameSection'),
     NAME_SECTION_COMP_STYLE = window.getComputedStyle(NAME_SECTION),
-    NAME_LETTERS_ELEMENTS = []
+    NAME_LETTERS_ELEMENTS = [],
 
     MODAL_BG = document.querySelector('#modalBg'),
-
-    MENU_MODAL = document.querySelector('#menuModal'),
-    MENU_MODAL_COMP_STYLE = window.getComputedStyle(MENU_MODAL),
-    MENU_MODAL_HEADER = MENU_MODAL.querySelector('#menuModalHeader'),
-    MENU_MODAL_MAIN = MENU_MODAL.querySelector("#menuModalMain"),
-
-    CONFIRM_MODAL = document.querySelector('#confirmModal'),
-    CONFIRM_MODAL_COMP_STYLE = window.getComputedStyle(CONFIRM_MODAL),
-    CONFIRM_MODAL_HEADER = MENU_MODAL.querySelector('#confirmModalHeader'),
-    CONFIRM_MODAL_MAIN = MENU_MODAL.querySelector("#confirmModalMain"),
+    MODALS = {
+        'MENU': {
+            'ELEMENT': document.querySelector('#menuModal'),
+            'COMPSTYLE': window.getComputedStyle(document.querySelector('#menuModal')),
+            'HEADER': document.querySelector('#menuModalHeader'),
+            'MAIN': document.querySelector("#menuModalMain")
+        },
+        'CONFIRM': {
+            'ELEMENT': document.querySelector('#confirmModal'),
+            'COMPSTYLE': window.getComputedStyle(document.querySelector('#confirmModal')),
+            'HEADER': document.querySelector('#confirmModalHeader'),
+            'MAIN': document.querySelector("#confirmModalMain"),
+            'BUTTONS': {
+                'YES': document.querySelector('#confirmModalButtonYes'),
+                'NO': document.querySelector('#confirmModalButtonNo')
+            }
+        }
+    }
 
     LOG_BUTTON = document.querySelector('#logButton'),
     OPTIONS_BUTTON = document.querySelector('#optionsButton'),
@@ -28,16 +36,16 @@ const MAIN_TEXTSECTION = document.querySelector('#textSection'),
         'SUPER SUSPENSE': 0.2
     };
 
-for(let currentLetter = 0; currentLetter < 20; currentLetter++){
-    NAME_LETTERS_ELEMENTS.push(document.querySelector('#nameLetter' + currentLetter))
-}
+for(let currentLetter = 0; currentLetter < 20; currentLetter++) NAME_LETTERS_ELEMENTS.push(document.querySelector('#nameLetter' + currentLetter))
 
 let awaitingInput = false,
     logText = '',
     eventIterator = -1,
     currentEvent = 'NORMAL',
     currentTextBlock = '',
-    currentCursorPosition = 0;
+    currentCursorPosition = 0,
+    playerName = [null, null],
+    modalActive = null;
 
 function startNextEvent(){
     eventIterator += 1
@@ -127,45 +135,43 @@ function skipText(){
     }
 }
 
-function toggleMenuModal(menuType = null){
-    if(ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] == 'NOT RUNNING'){
-        ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'RUNNING'
-        if(MENU_MODAL_COMP_STYLE.getPropertyValue('display') == 'none'){
-            switch(menuType){
-                case "LOG":
-                    MENU_MODAL_HEADER.innerHTML = 'Log';
-                    MENU_MODAL_MAIN.innerHTML = '';
+function toggleModal(modalType, menuType = null){
+    if(ANIMATIONS['TOGGLE_MODAL']['STATE'] == 'NOT RUNNING' && !anyOtherModalIsVisible(modalType)){
+        ANIMATIONS['TOGGLE_MODAL']['STATE'] = 'RUNNING'
+        if(MODALS[modalType]['COMPSTYLE'].getPropertyValue('display') == 'none'){
+            if(modalType == 'MENU'){
+                MODALS[modalType]['HEADER'].innerHTML = menuType.charAt(0) + menuType.slice(1).toLowerCase();
+                MODALS[modalType]['MAIN'].innerHTML = '';
+                if(menuType == "LOG"){
                     if (logText.length >= 1){
-                        MENU_MODAL_MAIN.innerHTML = logText
-                        MENU_MODAL_MAIN.style.overflowY = "scroll";
+                        MODALS[modalType]['MAIN'].innerHTML = logText
+                        MODALS[modalType]['MAIN'].style.overflowY = "scroll";
                     }
                     else{
-                        MENU_MODAL_MAIN.innerHTML = '';
+                        MODALS[modalType]['MAIN'].innerHTML = '';
                     }
-                break;
-                case "OPTIONS":
-                    MENU_MODAL_HEADER.innerHTML = 'Options';
-                    MENU_MODAL_MAIN.innerHTML = '';
-                break;
+                }
             }
             MODAL_BG.style.display = 'block';
-            MENU_MODAL.style.display = 'flex';
+            MODALS[modalType]['ELEMENT'].style.display = 'flex';
             let cleanIntervalLoop = setInterval(function(){
-                MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) + 0.1; 
+                MODALS[modalType]['ELEMENT'].style.opacity = parseFloat(MODALS[modalType]['COMPSTYLE'].getPropertyValue('opacity')) + 0.1; 
             }, 15)
             setTimeout(() => {
                 clearInterval(cleanIntervalLoop)
-                ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'NOT RUNNING'
+                ANIMATIONS['TOGGLE_MODAL']['STATE'] = 'NOT RUNNING'
+                modalActive = modalType
             }, 150);
         }else{
             let cleanIntervalLoop = setInterval(function(){
-                MENU_MODAL.style.opacity = parseFloat(MENU_MODAL_COMP_STYLE.getPropertyValue('opacity')) - 0.1; 
+                MODALS[modalType]['ELEMENT'].style.opacity = parseFloat(MODALS[modalType]['COMPSTYLE'].getPropertyValue('opacity')) - 0.1; 
             }, 15)
             setTimeout(() => {
                 clearInterval(cleanIntervalLoop);
-                MENU_MODAL.style.display = 'none';
+                MODALS[modalType]['ELEMENT'].style.display = 'none';
                 MODAL_BG.style.display = 'none';
-                ANIMATIONS['TOGGLE_MENU_MODAL']['STATE'] = 'NOT RUNNING'
+                ANIMATIONS['TOGGLE_MODAL']['STATE'] = 'NOT RUNNING'
+                modalActive = null
             }, 150);
         }
     }
@@ -215,7 +221,22 @@ function displayNextText(){
 }
 
 function confirmPlayerName(){
+
+    let currentLetterNumber = 0;
+    playerName = Array.from(document.querySelectorAll('.nameLetter'))
+        .reduce((prevVal, currVal, index) => {
+            if(index == 1) prevVal = prevVal.innerHTML
+            if(index == 10) prevVal += '&'
+            return prevVal + currVal.innerHTML.replace('&nbsp;', ' ').trim()
+        })
+        .split('&')
+        .map(name => name.charAt(0).toUpperCase() + name.slice(1).toLowerCase());
     
+    if(playerName[0].length > 0 && playerName[1].length > 0){
+        MODALS['CONFIRM']['HEADER'].innerHTML = '"' + playerName[0] + ' ' + playerName[1] + '", is that your true name?'
+        toggleModal('CONFIRM')
+        MODALS['CONFIRM']['BUTTONS']['NO'].focus()
+    }
 }
 
 function changeCurrentLetter(keyPressed){
@@ -233,50 +254,38 @@ function changeCurrentLetter(keyPressed){
             }else{
                 currentLetter.innerHTML = keyPressed
             }
-            if(currentLetter.style.borderLeft.includes('white')){
-                currentLetter.style.borderLeft = 'solid black 1px'
-            }
-            currentCursorPosition += 1
-        }
+            changeTypingCursorPosition(currentCursorPosition + 1)        }
     }else{
         if(keyPressed == "ArrowLeft" || keyPressed == "ArrowRight" || keyPressed == "ArrowUp" || keyPressed == "ArrowDown" || 
            keyPressed == "Backspace" || keyPressed == "Delete" || keyPressed == "Enter"){
-            if(currentCursorPosition == 20){
-                if(currentLetter.style.borderRight.includes('white')){
-                    currentLetter.style.borderRight = 'solid black 1px'
-                }
-            }else{
-                if(currentLetter.style.borderLeft.includes('white')){
-                    currentLetter.style.borderLeft = 'solid black 1px'
-                }
-            }
+
             switch(keyPressed){
                 case "ArrowLeft":
                     if(currentCursorPosition > 0){
-                        currentCursorPosition -= 1
+                        changeTypingCursorPosition(currentCursorPosition - 1)
                     }
                 break;
                 case "ArrowRight":
                     if(currentCursorPosition < 20){
-                        currentCursorPosition += 1
+                        changeTypingCursorPosition(currentCursorPosition + 1)
                     }
                 break;
                 case "ArrowDown":
                     if(currentCursorPosition < 10){
-                        currentCursorPosition += 10
+                        changeTypingCursorPosition(currentCursorPosition + 10)
                     }
                 break;
                 case "ArrowUp":
                     if(currentCursorPosition > 9){
                         if(currentCursorPosition == 20){
-                            currentCursorPosition -= 1
+                            changeTypingCursorPosition(currentCursorPosition - 1)
                         }
-                        currentCursorPosition -= 10
+                        changeTypingCursorPosition(currentCursorPosition - 10)
                     }
                 break;
                 case "Backspace":
                     if(currentCursorPosition > 0){
-                        currentCursorPosition -= 1
+                        changeTypingCursorPosition(currentCursorPosition - 1)
                         NAME_LETTERS_ELEMENTS[currentCursorPosition].innerHTML = '&nbsp;'
                     }
                 break;
@@ -293,17 +302,40 @@ function changeCurrentLetter(keyPressed){
                         NAME_LETTERS_ELEMENTS[19].innerHTML = '&nbsp;'
                     }
                 break;
-                case "Enter":
-                    if(currentCursorPosition < 10){
-                        currentCursorPosition = 10
-                    }
-                break;
             }
         }
     }
 }
 
+function changeTypingCursorPosition(newPosition){
+    clearInterval(ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'])
+    if(currentCursorPosition == 20){
+        NAME_LETTERS_ELEMENTS[currentCursorPosition - 1].style.borderRight = 'solid black 1px'
+    }else{
+        NAME_LETTERS_ELEMENTS[currentCursorPosition].style.borderLeft = 'solid black 1px'
+    }
+    currentCursorPosition = newPosition
+    ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'] = setInterval(() => {
+        if(currentCursorPosition < 20){
+            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition], "left")
+        }else{
+            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition - 1], "right")
+        }
+    }, 400)
+}
+
 elementIsVisible = elementCompStyle => elementCompStyle.getPropertyValue('display') != "none"
+
+anyModalIsVisible = () => Object.keys(MODALS).reduce((prevVal, currVal, index) => {
+    if(index == 1) return elementIsVisible(MODALS[prevVal]['COMPSTYLE'])
+    return true ? prevVal == true : elementIsVisible(MODALS[currVal]['COMPSTYLE'])
+})
+
+anyOtherModalIsVisible = modalType => Object.keys(MODALS).reduce((prevVal, currVal, index) => {
+    if(index == 1 && prevVal != modalType) return elementIsVisible(MODALS[prevVal]['COMPSTYLE'])
+    if(currVal != modalType) return elementIsVisible(MODALS[currVal]['COMPSTYLE'])
+    return false
+})
 
 MAIN_TEXTSECTION.addEventListener('click', () => skipText());
 
@@ -314,12 +346,18 @@ window.addEventListener('keyup', function(e){
         case 'Enter':
         case ' ':
             if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                if (!elementIsVisible(MENU_MODAL_COMP_STYLE)) skipText()
+                if (!anyModalIsVisible()) skipText()
             }else{
                 if(awaitingInput == true){
                     if(e.key == "Enter"){
                         if(currentCursorPosition > 9){
-                            if (!elementIsVisible(MENU_MODAL_COMP_STYLE)) confirmPlayerName()
+                            if (!anyModalIsVisible()) confirmPlayerName()
+                        } else if(currentCursorPosition < 10){
+                            let cursorPositionVerifier = 19
+                            do{
+                                cursorPositionVerifier--;
+                            }while(NAME_LETTERS_ELEMENTS[cursorPositionVerifier].innerHTML == '&nbsp;' && cursorPositionVerifier >= 10)
+                            changeTypingCursorPosition(cursorPositionVerifier + 1);
                         }
                     }                    
                 }
@@ -329,19 +367,19 @@ window.addEventListener('keyup', function(e){
         case 'l':
         case 'L':
             if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                toggleMenuModal('LOG')
+                toggleModal('MENU', 'LOG')
             }
         break;
 
         case 'o':
         case 'O':
             if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                toggleMenuModal('OPTIONS')
+                toggleModal('MENU', 'OPTIONS')
             }
         break;
 
         case 'Escape':
-            if(elementIsVisible(MENU_MODAL_COMP_STYLE)) toggleMenuModal()
+            if(elementIsVisible(MENU_MODAL_COMP_STYLE)) toggleModal('MENU')
         break;
     }
 
@@ -354,10 +392,10 @@ window.addEventListener('keydown', function(e){
         case 's':
         case 'S':
             if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                if (!elementIsVisible(MENU_MODAL_COMP_STYLE)) skipText()
+                if (!anyModalIsVisible()) skipText()
             }else{
                 if(awaitingInput == true){
-                    if (!elementIsVisible(MENU_MODAL_COMP_STYLE)) changeCurrentLetter(e.key)
+                    if (!anyModalIsVisible()) changeCurrentLetter(e.key)
                 }
             }
         break;
@@ -365,7 +403,9 @@ window.addEventListener('keydown', function(e){
         default:
             if(currentEvent == "NAME"){
                 if(awaitingInput == true){
-                    if (!elementIsVisible(MENU_MODAL_COMP_STYLE)) changeCurrentLetter(e.key)
+                    if(e.key != "Enter" && !anyModalIsVisible()){
+                        changeCurrentLetter(e.key)
+                    }
                 }
             }
         break;
@@ -374,10 +414,39 @@ window.addEventListener('keydown', function(e){
 
 });
 
-LOG_BUTTON.addEventListener("click", () => toggleMenuModal('LOG'))
+LOG_BUTTON.addEventListener("click", () => toggleModal('MENU', 'LOG'))
 
-OPTIONS_BUTTON.addEventListener("click", () => toggleMenuModal('OPTIONS'))
+OPTIONS_BUTTON.addEventListener("click", () => toggleModal('MENU', 'OPTIONS'))
 
-MODAL_BG.addEventListener("click", () => toggleMenuModal())
+MODAL_BG.addEventListener("click", () => toggleModal(modalActive))
+
+MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
+    switch(currentEvent){
+        case "NAME":
+            SCRIPT = SCRIPT.map(event => {
+                event['TEXT'] = event['TEXT'].map(text => {
+                    if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
+                    if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
+                    return text
+                })
+                return event
+            })
+            clearInterval(ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'])
+            ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'NOT RUNNING'
+            NAME_SECTION.style.display = "none"
+            toggleModal('CONFIRM')
+            awaitingInput = false
+            skipText()
+        break;
+    }
+})
+
+MODALS['CONFIRM']['BUTTONS']['NO'].addEventListener("click", () => {
+    switch(currentEvent){
+        case "NAME":
+            toggleModal('CONFIRM')
+        break;
+    }
+})
 
 startNextEvent()

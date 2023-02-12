@@ -9,7 +9,7 @@ ANIMATIONS = {
         'LOOP': null,
         'CALLBACK': null
     },
-    'TOGGLE_MENU_MODAL': {
+    'TOGGLE_MODAL': {
         'STATE': 'NOT RUNNING',
         'LOOP': null,
         'CALLBACK': null

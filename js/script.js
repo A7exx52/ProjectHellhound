@@ -20,7 +20,7 @@ SCRIPT = [
         'EVENT': 'NAME'
     },
     {
-        'TEXT': ["...Michael Crowley, was it? A nice name like that."],
+        'TEXT': ["...playerName0 playerName1, was it? A nice name like that."],
         'EVENT': 'NORMAL'
     },
     {
