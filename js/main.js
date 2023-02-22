@@ -1,3 +1,4 @@
+// JS DOM ELEMENTS
 const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
     MAIN_TEXT_SECTION_COMP_STYLE = window.getComputedStyle(MAIN_TEXT_SECTION),
 
@@ -30,13 +31,10 @@ const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
     OPTIONS_BUTTON = document.querySelector('#optionsButton'),
 
     TEXT_SPEEDS = {
-        'NORMAL': 0.055,
-        'NAME': 0.055,
-        'CHOICE': 0.055,
-        'AFTER_CHOICE': 0.055,
+        'NORMAL': 0.030,
+        'SCENARIO_CHANGE': 0.1,
         'SURPRISE': 0.0025,
-        'SUSPENSE': 0.1,
-        'SUPER SUSPENSE': 0.2
+        'SUSPENSE': 0.2
     };
 
 for(let currentLetter = 0; currentLetter < 20; currentLetter++) NAME_LETTERS_ELEMENTS.push(document.querySelector('#nameLetter' + currentLetter))
@@ -52,37 +50,94 @@ let awaitingInput = false,
     eventIterator = -1,
     currentEvent = 'NORMAL',
     currentTextBlock = '',
+    currentTextSpeed = 'NORMAL',
     currentCursorPosition = 0,
+    currentInfoRemaining = []
+    currentChoice = null,
+    previousChoice = null,
     playerName = [null, null],
-    modalActive = null,
-    currentChoice = null;
-
+    modalActive = null;
+                              
+// MAIN GAME EVENTS FUNCTIONS
 function startNextEvent(){
+
+    // EVENT CHANGE
+    // Advances to next event
     eventIterator += 1
+    // Resets game if it reaches the end
     if(eventIterator == SCRIPT.length){
         eventIterator = 0
     }
     currentEvent = SCRIPT[eventIterator]['EVENT']
-    if(eventIterator > 0){
-        if(SCRIPT[eventIterator - 1]['EVENT'] == 'CHOICE'){
-            currentTextBlock = SCRIPT[eventIterator]['TEXT'][currentChoice]
-        }
-        else currentTextBlock = SCRIPT[eventIterator]['TEXT']
-    }
-    else currentTextBlock = SCRIPT[eventIterator]['TEXT']
 
-    displayNextText();
+    // INFO GATHERING
+    // Goes back to the first info gathering response event in case it reaches the end of the answer from a certain info
+    if(currentInfoRemaining.length > 0 && (Array.isArray(SCRIPT[eventIterator]['TEXT']) || SCRIPT[eventIterator]['TEXT'][previousChoice] == null)){
+        while(SCRIPT[eventIterator - 1]['EVENT'] != "INFO_GATHERING") eventIterator--;
+        currentEvent = SCRIPT[eventIterator]['EVENT']
+    }
+    else if(!Array.isArray(SCRIPT[eventIterator]['TEXT']) && SCRIPT[eventIterator]['TEXT'][currentChoice] == null) {
+        while(!Array.isArray(SCRIPT[eventIterator]['TEXT'])) eventIterator++;
+        currentEvent = SCRIPT[eventIterator]['EVENT']
+    }
+    
+    // Sets current info remaining according to the choices of the event
+    if(currentEvent == "INFO_GATHERING"){
+        currentInfoRemaining = Array.from(Array(Object.keys(SCRIPT[eventIterator]['CHOICES']).length)).map((val, index) => SCRIPT[eventIterator]['CHOICES'][index])
+    }
+    
+    // De-sets previousChoice to avoid text repetition
+    previousChoice = currentChoice 
+    
+    // Clears info remaining if all choices have already been picked
+    if(currentInfoRemaining.length > 0 && !checkInfoRemainingForGather()) currentInfoRemaining = []
+
+
+    // Text selection (Chooses correct text in case of being a choice-dependant event)
+    if(Array.isArray(SCRIPT[eventIterator]['TEXT'])){
+        currentTextBlock = SCRIPT[eventIterator]['TEXT']
+        currentTextSpeed = SCRIPT[eventIterator]['TEXT_SPEED']
+    }else{
+        currentTextBlock = SCRIPT[eventIterator]['TEXT'][currentChoice]
+        currentTextSpeed = SCRIPT[eventIterator]['TEXT_SPEED'][currentChoice]
+    }
+
+    // Display text animation loop
+    ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'RUNNING'
+    let textCharIterator = 0,
+    textLineIterator = 0;
+    ANIMATIONS['DISPLAY_TEXT']['LOOP'] = setInterval(() => {
+        if(textLineIterator < currentTextBlock.length){
+            if(textCharIterator < currentTextBlock[textLineIterator].length){
+                MAIN_TEXT_SECTION.innerHTML += currentTextBlock[textLineIterator][textCharIterator]
+                textCharIterator++;
+            }
+            else{
+                textLineIterator++;
+                textCharIterator = 0;
+                MAIN_TEXT_SECTION.innerHTML += "<br>"
+            }
+        }else{
+            clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
+            logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
+            ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING'
+            startInputPhase()
+        }
+    }, TEXT_SPEEDS[currentTextSpeed] * 1000)
 
 }
 
-function endCurrentEvent(){
+function startInputPhase(){
 
-    if(currentEvent == 'NAME' || currentEvent == 'CHOICE'){
+    if(currentEvent == 'NAME' || currentEventHasChoices()){
         awaitingInput = true
-        if(currentEvent == 'CHOICE'){
-            SCRIPT[eventIterator]['CHOICES'].forEach((choice, index) => {
-                CHOICE_BUTTONS[index]['ELEMENT'].innerHTML = choice
-                CHOICE_BUTTONS[index]['ELEMENT'].style.display = 'flex'
+        if(currentEvent != "NAME"){
+            let choices = SCRIPT[eventIterator].hasOwnProperty('CHOICES') ? SCRIPT[eventIterator]['CHOICES'] : currentInfoRemaining
+            Object.keys(choices).forEach(choiceVal => {
+                if (choices[choiceVal] != null){
+                    CHOICE_BUTTONS[parseInt(choiceVal)]['ELEMENT'].innerHTML = choices[choiceVal]
+                    CHOICE_BUTTONS[parseInt(choiceVal)]['ELEMENT'].style.display = 'flex'
+                }
             })
             INPUT_SECTION.style.flexDirection = 'column'
             INPUT_SECTION.style.justifyContent = 'flex-start'
@@ -114,7 +169,7 @@ function endCurrentEvent(){
 }
 
 // Every time the player holds "S" or press "Space/Enter"
-function skipText(){
+function advanceText(){
     if(!awaitingInput){
 
         // Checks if letters are being draw
@@ -123,21 +178,27 @@ function skipText(){
             MAIN_TEXT_SECTION.innerHTML = currentTextBlock.join('<br>')
             logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
             ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING';
-            endCurrentEvent()
+            startInputPhase()
         }
 
         // Checks if text is already full shown
         else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING'){
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'RUNNING'
             ANIMATIONS['CLEAR_TEXT']['LOOP'] = setInterval(() => {
-                if(currentEvent == 'CHOICE') INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;    
+                if(currentEventHasChoices()){
+                    INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;
+                }  
                 MAIN_TEXT_SECTION.style.opacity = parseFloat(MAIN_TEXT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;
             }, 50)
             ANIMATIONS['CLEAR_TEXT']['CALLBACK'] = setTimeout(() => {
                 clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP']);
-                if(currentEvent == 'CHOICE'){ 
+                if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){ 
                     INPUT_SECTION.style.opacity = 0.1;
                     INPUT_SECTION.style.display = 'none';
+                    CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
+                    if(checkInfoRemainingForGather()){
+                        currentInfoRemaining[currentChoice] = null
+                    }
                 }
                 MAIN_TEXT_SECTION.innerHTML= '';
                 MAIN_TEXT_SECTION.style.opacity = 1;
@@ -153,11 +214,20 @@ function skipText(){
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
             MAIN_TEXT_SECTION.innerHTML= '';
             MAIN_TEXT_SECTION.style.opacity = 1;
+            if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){
+                INPUT_SECTION.style.opacity = 0.1;
+                INPUT_SECTION.style.display = 'none';
+                CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
+                if(currentInfoRemaining.length > 0){
+                    currentInfoRemaining[currentChoice] = null
+                }
+            }
             startNextEvent();
         }
     }
 }
 
+// ANIMATION FUNCTIONS
 function toggleModal(modalType, menuType = null){
     if(ANIMATIONS['TOGGLE_MODAL']['STATE'] == 'NOT RUNNING' && !anyOtherModalIsVisible(modalType)){
         ANIMATIONS['TOGGLE_MODAL']['STATE'] = 'RUNNING'
@@ -219,30 +289,7 @@ function toggleElementBorder(element, borderSide){
     }
 }
 
-function displayNextText(){
-    ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'RUNNING'
-    let textCharIterator = 0,
-    textLineIterator = 0;
-    ANIMATIONS['DISPLAY_TEXT']['LOOP'] = setInterval(() => {
-        if(textLineIterator < currentTextBlock.length){
-            if(textCharIterator < currentTextBlock[textLineIterator].length){
-                MAIN_TEXT_SECTION.innerHTML += currentTextBlock[textLineIterator][textCharIterator]
-                textCharIterator++;
-            }
-            else{
-                textLineIterator++;
-                textCharIterator = 0;
-                MAIN_TEXT_SECTION.innerHTML += "<br>"
-            }
-        }else{
-            clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
-            logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
-            ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING'
-            endCurrentEvent()
-        }
-    }, TEXT_SPEEDS[currentEvent] * 1000)
-}
-
+// NAME TYPING FUNCTIONS
 function changeCurrentLetter(keyPressed){
     let currentLetter;
     if(currentCursorPosition == 20){
@@ -328,6 +375,7 @@ function changeTypingCursorPosition(newPosition){
     }, 400)
 }
 
+// VISIBILITY FUNCTIONS
 elementIsVisible = elementCompStyle => elementCompStyle.getPropertyValue('display') != "none"
 
 anyModalIsVisible = () => Object.keys(MODALS).reduce((prevVal, currVal, index) => {
@@ -341,7 +389,14 @@ anyOtherModalIsVisible = modalType => Object.keys(MODALS).reduce((prevVal, currV
     return false
 })
 
-MAIN_TEXT_SECTION.addEventListener('click', () => skipText());
+// INFO GATHERING FUNCTIONS
+                                // The array can't be empty when checking
+checkInfoRemainingForGather = () => currentInfoRemaining.length > 0 && currentInfoRemaining.reduce((prevVal, currVal) => prevVal != null && prevVal != false ? true : (currVal != null ? true : false))
+
+currentEventHasChoices = () => SCRIPT[eventIterator].hasOwnProperty('CHOICES') || (checkInfoRemainingForGather() && (Array.isArray(SCRIPT[eventIterator + 1]['TEXT']) || SCRIPT[eventIterator + 1]['TEXT'][currentChoice] == null))
+
+// JS EVENTS
+MAIN_TEXT_SECTION.addEventListener('click', () => advanceText());
 
 window.addEventListener('keyup', function(e){
 
@@ -349,8 +404,8 @@ window.addEventListener('keyup', function(e){
 
         case 'Enter':
         case ' ':
-            if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                if (!anyModalIsVisible()) skipText()
+            if((currentEvent != "NAME") || (currentEvent == "NAME" && awaitingInput == false)){
+                if (!anyModalIsVisible()) advanceText()
             }else{
                 if(awaitingInput == true){
                     if(e.key == "Enter"){
@@ -410,7 +465,7 @@ window.addEventListener('keydown', function(e){
         case 's':
         case 'S':
             if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
-                if (!anyModalIsVisible()) skipText()
+                if (!anyModalIsVisible()) advanceText()
             }else{
                 if(awaitingInput == true){
                     if (!anyModalIsVisible()) changeCurrentLetter(e.key)
@@ -441,27 +496,16 @@ MODAL_BG.addEventListener("click", () => toggleModal(modalActive))
 MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
     switch(currentEvent){
         case "NAME":
-            SCRIPT = SCRIPT.map((event, index) => {
-
-                event['TEXT'] = event['TEXT'].map(text => {
-                    if(index > 0){
-                        if(SCRIPT[index - 1]['EVENT'] == 'CHOICE'){
-                            text = text.map(choiceText => {
-                                if(choiceText.includes('playerName0')) choiceText = choiceText.replace('playerName0', playerName[0])
-                                if(choiceText.includes('playerName1')) choiceText = choiceText.replace('playerName1', playerName[1]) 
-                                return choiceText       
-                            })
-                        }else{
-                            if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
-                            if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
+            SCRIPT = SCRIPT.map(event => {
+                if(Array.isArray(event['TEXT'])){
+                    event['TEXT'] = event['TEXT'].map(text => text.replace('playerName0', playerName[0]).replace('playerName1', playerName[1]))
+                }else{
+                    Object.keys(event['TEXT']).forEach(choiceVal => {
+                        if(event['TEXT'][choiceVal] != null){
+                            event['TEXT'][choiceVal] = event['TEXT'][choiceVal].map(choiceText => choiceText.replace('playerName0', playerName[0]).replace('playerName1', playerName[1]))
                         }
-                    }
-                    else{
-                        if(text.includes('playerName0')) text = text.replace('playerName0', playerName[0])
-                        if(text.includes('playerName1')) text = text.replace('playerName1', playerName[1])
-                    }
-                    return text
-                })
+                    })
+                }
                 return event
             })
             clearInterval(ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'])
@@ -471,7 +515,7 @@ MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
             Array.from(document.querySelectorAll('.nameSectionColumn')).forEach(section => section.remove())
             toggleModal('CONFIRM')
             awaitingInput = false
-            skipText()
+            advanceText()
         break;
     }
 })
@@ -487,13 +531,14 @@ MODALS['CONFIRM']['BUTTONS']['NO'].addEventListener("click", () => {
 CHOICE_BUTTONS.forEach((buttonClicked, indexClickedButton) => {
     buttonClicked['ELEMENT'].addEventListener('click', () =>{
         awaitingInput = false;
-        currentChoice = indexClickedButton
+        previousChoice = currentChoice;
+        currentChoice = indexClickedButton;
         CHOICE_BUTTONS.forEach((button, index) => {
             if(index != indexClickedButton){
                 button['ELEMENT'].style.display = 'none'
             }
         })
-        skipText()
+        advanceText()
     })
 })
 
