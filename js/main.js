@@ -6,6 +6,7 @@ const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
     INPUT_SECTION_COMP_STYLE = window.getComputedStyle(INPUT_SECTION),
     NAME_LETTERS_ELEMENTS = [],
     CHOICE_BUTTONS = [],
+    MAX_NUMBER_TEXT_CHOICES = 4,
 
     MODAL_BG = document.querySelector('#modalBg'),
     MODALS = {
@@ -38,7 +39,7 @@ const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
     };
 
 for(let currentLetter = 0; currentLetter < 20; currentLetter++) NAME_LETTERS_ELEMENTS.push(document.querySelector('#nameLetter' + currentLetter))
-for(let currentButton = 1; currentButton < 5; currentButton++){
+for(let currentButton = 0; currentButton < 4; currentButton++){
     CHOICE_BUTTONS.push({
         'ELEMENT': document.querySelector('#choiceButton' + currentButton),
         'COMPSTYLE': window.getComputedStyle(document.querySelector('#choiceButton' + currentButton))
@@ -47,16 +48,25 @@ for(let currentButton = 1; currentButton < 5; currentButton++){
 
 let awaitingInput = false,
     logText = '',
+    modalActive = null,
+
     eventIterator = -1,
-    currentEvent = 'NORMAL',
+    currentEvent = {},
+    currentEventType = 'NORMAL'
     currentTextBlock = '',
     currentTextSpeed = 'NORMAL',
-    currentCursorPosition = 0,
-    currentInfoRemaining = []
-    currentChoice = null,
+
+    lastEventCheckpoint = {'EVENT_ID': 0, 'CHOICE_ROUTE': '0'},
+    infoGatheringCheckpoints = [],
+    currentInfoGatheringCheckpoint = -1,
+    reachedInfoGatheringAnswerEnd = false,
+
+    choiceRoute = ["0"],
+    currentChoice = null
     previousChoice = null,
-    playerName = [null, null],
-    modalActive = null;
+
+    currentCursorPosition = 0,
+    playerName = [null, null];
                               
 // MAIN GAME EVENTS FUNCTIONS
 function startNextEvent(){
@@ -68,39 +78,45 @@ function startNextEvent(){
     if(eventIterator == SCRIPT.length){
         eventIterator = 0
     }
-    currentEvent = SCRIPT[eventIterator]['EVENT']
 
-    // INFO GATHERING
-    // Goes back to the first info gathering response event in case it reaches the end of the answer from a certain info
-    if(currentInfoRemaining.length > 0 && (Array.isArray(SCRIPT[eventIterator]['TEXT']) || SCRIPT[eventIterator]['TEXT'][previousChoice] == null)){
-        while(SCRIPT[eventIterator - 1]['EVENT'] != "INFO_GATHERING") eventIterator--;
-        currentEvent = SCRIPT[eventIterator]['EVENT']
+    // EVENT CHOICE ROUTING
+    // Goes to last choice layer possible
+    currentEvent = SCRIPT[eventIterator]
+    choiceRouteLayer = 1
+    while(currentEvent.hasOwnProperty(choiceRoute.slice(0, choiceRouteLayer).join('.'))){
+        currentEvent = currentEvent[choiceRoute.slice(0, choiceRouteLayer).join('.')]  
+        choiceRouteLayer++
     }
-    else if(!Array.isArray(SCRIPT[eventIterator]['TEXT']) && SCRIPT[eventIterator]['TEXT'][currentChoice] == null) {
-        while(!Array.isArray(SCRIPT[eventIterator]['TEXT'])) eventIterator++;
-        currentEvent = SCRIPT[eventIterator]['EVENT']
+    choiceRouteLayer--
+    
+    // If it reaches a layer that doesn't exist anymore, goes to a previous layer (the narrative unifies)
+    if(!currentEvent.hasOwnProperty(choiceRoute.slice(0, choiceRouteLayer).join('.'))){
+        for(let lastChoiceLayer = choiceRoute.length - 1; lastChoiceLayer >= choiceRouteLayer; lastChoiceLayer--) choiceRoute.pop()
     }
+
+    // Gets event type
+    currentEventType = currentEvent['EVENT_TYPE']
     
     // Sets current info remaining according to the choices of the event
-    if(currentEvent == "INFO_GATHERING"){
-        currentInfoRemaining = Array.from(Array(Object.keys(SCRIPT[eventIterator]['CHOICES']).length)).map((val, index) => SCRIPT[eventIterator]['CHOICES'][index])
+    if(currentEventType == "INFO_GATHERING"){
+        infoGatheringCheckpoints.push({
+            'EVENT_ID': eventIterator,
+            'CHOICE_ROUTE': JSON.parse(JSON.stringify(choiceRoute)), // Creates deep copy of the object
+            'INFO_REMAINING': currentEvent['CHOICES']
+        })
+        currentInfoGatheringCheckpoint++
     }
-    
-    // De-sets previousChoice to avoid text repetition
-    previousChoice = currentChoice 
-    
+
     // Clears info remaining if all choices have already been picked
-    if(currentInfoRemaining.length > 0 && !checkInfoRemainingForGather()) currentInfoRemaining = []
-
-
-    // Text selection (Chooses correct text in case of being a choice-dependant event)
-    if(Array.isArray(SCRIPT[eventIterator]['TEXT'])){
-        currentTextBlock = SCRIPT[eventIterator]['TEXT']
-        currentTextSpeed = SCRIPT[eventIterator]['TEXT_SPEED']
-    }else{
-        currentTextBlock = SCRIPT[eventIterator]['TEXT'][currentChoice]
-        currentTextSpeed = SCRIPT[eventIterator]['TEXT_SPEED'][currentChoice]
+    if(currentInfoGatheringCheckpoint > -1 && Object.keys(infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['INFO_REMAINING']).length == 0){
+        infoGatheringCheckpoints.pop()
+        currentInfoGatheringCheckpoint--
     }
+
+    // Text selection
+    currentTextBlock = currentEvent['TEXT']
+    currentTextBlock = currentTextBlock.map(textLine => textLine.replace('playerName0', playerName[0]).replace('playerName1', playerName[1]))
+    currentTextSpeed = currentEvent['TEXT_SPEED']
 
     // Display text animation loop
     ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'RUNNING'
@@ -129,21 +145,40 @@ function startNextEvent(){
 
 function startInputPhase(){
 
-    if(currentEvent == 'NAME' || currentEventHasChoices()){
+    if(currentEventType == 'NAME' || currentEventHasChoices()){
         awaitingInput = true
-        if(currentEvent != "NAME"){
-            let choices = SCRIPT[eventIterator].hasOwnProperty('CHOICES') ? SCRIPT[eventIterator]['CHOICES'] : currentInfoRemaining
-            Object.keys(choices).forEach(choiceVal => {
-                if (choices[choiceVal] != null){
-                    CHOICE_BUTTONS[parseInt(choiceVal)]['ELEMENT'].innerHTML = choices[choiceVal]
-                    CHOICE_BUTTONS[parseInt(choiceVal)]['ELEMENT'].style.display = 'flex'
-                }
+        if(currentEventType != "NAME"){
+
+            let choices = null;
+
+            // Checks if the event has choices
+            if(currentEvent.hasOwnProperty('CHOICES')){ 
+                choices = JSON.parse(JSON.stringify(currentEvent['CHOICES'])) // Creates deep copy of the object
+
+                // Deletes last choice if it's an info gathering starting event
+                if(currentEventType == 'INFO_GATHERING') delete choices[Object.keys(choices).at(-1)]
+
+            }
+
+            // or else it's an info gathering returning event
+            else {
+                choices = JSON.parse(JSON.stringify(infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['INFO_REMAINING'])) // Creates deep copy of the object
+                if (stillHasInfoToGather()) delete choices[Object.keys(choices).at(-1)]
+            }
+
+            // Display choices on input section
+            Object.keys(choices).forEach((choiceVal, index) => {
+                CHOICE_BUTTONS[index]['ELEMENT'].innerHTML = choices[choiceVal]
+                CHOICE_BUTTONS[index]['ELEMENT'].style.display = 'flex'
+                CHOICE_BUTTONS[index]['ELEMENT'].setAttribute('choiceval', choiceVal)
             })
             INPUT_SECTION.style.flexDirection = 'column'
             INPUT_SECTION.style.justifyContent = 'flex-start'
             INPUT_SECTION.style.alignItems = 'flex-start'
         }
         INPUT_SECTION.style.display = 'flex'
+
+        // Initiates fade-in animation
         ANIMATIONS['DISPLAY_INPUT_SECTION']['STATE'] = 'RUNNING'
         ANIMATIONS['DISPLAY_INPUT_SECTION']['LOOP'] = setInterval(() =>
             INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) + 0.1
@@ -152,17 +187,17 @@ function startInputPhase(){
             clearInterval(ANIMATIONS['DISPLAY_INPUT_SECTION']['LOOP']);
             INPUT_SECTION.style.opacity = 1;
             ANIMATIONS['DISPLAY_INPUT_SECTION']['STATE'] = 'NOT RUNNING';
-            switch(currentEvent){
-                case 'NAME':
-                    ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'RUNNING'
-                    ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'] = setInterval(() => {
-                        if(currentCursorPosition < 20){
-                            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition], "left")
-                        }else{
-                            toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition - 1], "right")
-                        }
-                    }, 400)
-                break;
+
+            // Starts typing cursor animation in case of being the naming event
+            if(currentEventType == "NAME"){
+                ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'RUNNING'
+                ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'] = setInterval(() => {
+                    if(currentCursorPosition < 20){
+                        toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition], "left")
+                    }else{
+                        toggleElementBorder(NAME_LETTERS_ELEMENTS[currentCursorPosition - 1], "right")
+                    }
+                }, 400)
             }
         }, 200)
     }
@@ -174,36 +209,41 @@ function advanceText(){
 
         // Checks if letters are being draw
         if(ANIMATIONS['DISPLAY_TEXT']['STATE'] == 'RUNNING'){
+
+            // Shows the entire text at once
             clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
             MAIN_TEXT_SECTION.innerHTML = currentTextBlock.join('<br>')
             logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
             ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING';
             startInputPhase()
+
         }
 
         // Checks if text is already full shown
         else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING'){
+
+            // Starts clearing text animation
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'RUNNING'
             ANIMATIONS['CLEAR_TEXT']['LOOP'] = setInterval(() => {
-                if(currentEventHasChoices()){
+                if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){
                     INPUT_SECTION.style.opacity = parseFloat(INPUT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;
                 }  
                 MAIN_TEXT_SECTION.style.opacity = parseFloat(MAIN_TEXT_SECTION_COMP_STYLE.getPropertyValue('opacity')) - 0.1;
             }, 50)
             ANIMATIONS['CLEAR_TEXT']['CALLBACK'] = setTimeout(() => {
+
+                // Upon finishing the text clearing animation, clears the input section too
                 clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP']);
                 if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){ 
                     INPUT_SECTION.style.opacity = 0.1;
                     INPUT_SECTION.style.display = 'none';
                     CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
-                    if(checkInfoRemainingForGather()){
-                        currentInfoRemaining[currentChoice] = null
-                    }
                 }
                 MAIN_TEXT_SECTION.innerHTML= '';
                 MAIN_TEXT_SECTION.style.opacity = 1;
                 ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
                 startNextEvent();
+
             }, 500)
         }
 
@@ -218,9 +258,6 @@ function advanceText(){
                 INPUT_SECTION.style.opacity = 0.1;
                 INPUT_SECTION.style.display = 'none';
                 CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
-                if(currentInfoRemaining.length > 0){
-                    currentInfoRemaining[currentChoice] = null
-                }
             }
             startNextEvent();
         }
@@ -389,11 +426,27 @@ anyOtherModalIsVisible = modalType => Object.keys(MODALS).reduce((prevVal, currV
     return false
 })
 
-// INFO GATHERING FUNCTIONS
-                                // The array can't be empty when checking
-checkInfoRemainingForGather = () => currentInfoRemaining.length > 0 && currentInfoRemaining.reduce((prevVal, currVal) => prevVal != null && prevVal != false ? true : (currVal != null ? true : false))
+// INFO GATHERING FUNCTIONS       
+stillHasInfoToGather = () => currentInfoGatheringCheckpoint > -1 && Object.keys(infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['INFO_REMAINING']).length > 1
 
-currentEventHasChoices = () => SCRIPT[eventIterator].hasOwnProperty('CHOICES') || (checkInfoRemainingForGather() && (Array.isArray(SCRIPT[eventIterator + 1]['TEXT']) || SCRIPT[eventIterator + 1]['TEXT'][currentChoice] == null))
+reachedInfoAnswerLastEvent = () => {
+
+    if(currentInfoGatheringCheckpoint == -1) return false;
+
+    let nextEvent = SCRIPT[eventIterator + 1],
+        choiceRouteLayer = 1,
+        nextEventChoiceRoute = ''
+
+    while(nextEvent.hasOwnProperty(choiceRoute.slice(0, choiceRouteLayer).join('.'))){
+        nextEvent = nextEvent[choiceRoute.slice(0, choiceRouteLayer).join('.')]
+        nextEventChoiceRoute = choiceRoute.slice(0, choiceRouteLayer).join('.')  
+        choiceRouteLayer++
+    }
+    choiceRouteLayer--
+    return currentInfoGatheringCheckpoint > -1 && nextEventChoiceRoute != choiceRoute.join('.')
+}
+
+currentEventHasChoices = () => currentEvent.hasOwnProperty('CHOICES') || reachedInfoAnswerLastEvent()
 
 // JS EVENTS
 MAIN_TEXT_SECTION.addEventListener('click', () => advanceText());
@@ -404,7 +457,7 @@ window.addEventListener('keyup', function(e){
 
         case 'Enter':
         case ' ':
-            if((currentEvent != "NAME") || (currentEvent == "NAME" && awaitingInput == false)){
+            if((currentEventType != "NAME") || (currentEventType == "NAME" && awaitingInput == false)){
                 if (!anyModalIsVisible()) advanceText()
             }else{
                 if(awaitingInput == true){
@@ -439,14 +492,14 @@ window.addEventListener('keyup', function(e){
 
         case 'l':
         case 'L':
-            if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
+            if(currentEventType != "NAME" || (currentEventType == "NAME" && awaitingInput == false)){
                 toggleModal('MENU', 'LOG')
             }
         break;
 
         case 'o':
         case 'O':
-            if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
+            if(currentEventType != "NAME" || (currentEventType == "NAME" && awaitingInput == false)){
                 toggleModal('MENU', 'OPTIONS')
             }
         break;
@@ -464,7 +517,7 @@ window.addEventListener('keydown', function(e){
 
         case 's':
         case 'S':
-            if(currentEvent != "NAME" || (currentEvent == "NAME" && awaitingInput == false)){
+            if(currentEventType != "NAME" || (currentEventType == "NAME" && awaitingInput == false)){
                 if (!anyModalIsVisible()) advanceText()
             }else{
                 if(awaitingInput == true){
@@ -474,7 +527,7 @@ window.addEventListener('keydown', function(e){
         break;
 
         default:
-            if(currentEvent == "NAME"){
+            if(currentEventType == "NAME"){
                 if(awaitingInput == true){
                     if(e.key != "Enter" && !anyModalIsVisible()){
                         changeCurrentLetter(e.key)
@@ -494,20 +547,8 @@ OPTIONS_BUTTON.addEventListener("click", () => toggleModal('MENU', 'OPTIONS'))
 MODAL_BG.addEventListener("click", () => toggleModal(modalActive))
 
 MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
-    switch(currentEvent){
+    switch(currentEventType){
         case "NAME":
-            SCRIPT = SCRIPT.map(event => {
-                if(Array.isArray(event['TEXT'])){
-                    event['TEXT'] = event['TEXT'].map(text => text.replace('playerName0', playerName[0]).replace('playerName1', playerName[1]))
-                }else{
-                    Object.keys(event['TEXT']).forEach(choiceVal => {
-                        if(event['TEXT'][choiceVal] != null){
-                            event['TEXT'][choiceVal] = event['TEXT'][choiceVal].map(choiceText => choiceText.replace('playerName0', playerName[0]).replace('playerName1', playerName[1]))
-                        }
-                    })
-                }
-                return event
-            })
             clearInterval(ANIMATIONS['NAME_TYPING_CURSOR']['LOOP'])
             ANIMATIONS['NAME_TYPING_CURSOR']['STATE'] = 'NOT RUNNING'
             INPUT_SECTION.style.display = "none"
@@ -521,7 +562,7 @@ MODALS['CONFIRM']['BUTTONS']['YES'].addEventListener("click", () => {
 })
 
 MODALS['CONFIRM']['BUTTONS']['NO'].addEventListener("click", () => {
-    switch(currentEvent){
+    switch(currentEventType){
         case "NAME":
             toggleModal('CONFIRM')
         break;
@@ -532,7 +573,36 @@ CHOICE_BUTTONS.forEach((buttonClicked, indexClickedButton) => {
     buttonClicked['ELEMENT'].addEventListener('click', () =>{
         awaitingInput = false;
         previousChoice = currentChoice;
-        currentChoice = indexClickedButton;
+        currentChoice = buttonClicked['ELEMENT'].getAttribute('id').slice(-1);
+
+        // Deletes choice from the info remaining of the current info gathering event loop and goes back to the info gathering event in case it reaches the end of the answer from a certain info
+        if(currentInfoGatheringCheckpoint > -1 && (currentEventType == "INFO_GATHERING" || reachedInfoAnswerLastEvent())){
+            if(reachedInfoAnswerLastEvent()){
+                choiceRoute.pop()
+                if(stillHasInfoToGather()){
+                    eventIterator = infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['EVENT_ID']
+                    currentEvent = SCRIPT[eventIterator]
+                }
+            }
+
+            if(stillHasInfoToGather()) choiceRoute.push(buttonClicked['ELEMENT'].getAttribute('choiceval'))
+            // Goes to the end of the info gathering evet in case there's no other choice
+            else{
+                choiceRoute = infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['CHOICE_ROUTE']
+                while(!SCRIPT[eventIterator + 1][infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['CHOICE_ROUTE'].join('.')].hasOwnProperty('TEXT')){
+                    eventIterator++;
+                }
+            } 
+
+            delete infoGatheringCheckpoints[currentInfoGatheringCheckpoint]['INFO_REMAINING'][buttonClicked['ELEMENT'].getAttribute('choiceval')]
+        }
+        else{
+            // Adds choice to the choice route
+            choiceRoute.push(currentChoice)
+        }
+        console.log(choiceRoute)
+        
+        // Clears input section excluding the actual choice
         CHOICE_BUTTONS.forEach((button, index) => {
             if(index != indexClickedButton){
                 button['ELEMENT'].style.display = 'none'
