@@ -56,6 +56,11 @@ main{
     width: 100%;
     height: fit-content;
 }
+#itemAddedText{
+    display: none;
+    opacity: 0;
+    color: white;
+}
 /* =================================== */
 
 
@@ -105,6 +110,7 @@ button{
     background-color: rgba(0, 0, 0, 0);
     color: white;
     font-size: inherit;
+    border: none;
 }
 button:hover, button:focus{
     color: #6996ff;
@@ -128,7 +134,7 @@ button:hover, button:focus{
     height: 100vh;
     width: 100vw;
     background-color: rgba(0,0,0,0.6);
-    z-index: 1;
+    z-index: 2;
     position: absolute;
 }
 
@@ -142,7 +148,7 @@ button:hover, button:focus{
     border-radius: 20px;
     height: 80%;
     width: 50%;
-    z-index: 2;
+    z-index: 3;
     flex-direction: column;
     padding: 1.5rem;
     gap: 1.5rem;
@@ -177,7 +183,7 @@ button:hover, button:focus{
     border-radius: 20px;
     height: 30%;
     width: 40%;
-    z-index: 2;
+    z-index: 3;
     flex-direction: column;
     align-items: center;
     padding: 1.5rem;

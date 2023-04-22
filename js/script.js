@@ -322,9 +322,10 @@ SCRIPT = [
             'TEXT': [
                 'Mundie wiped his forehead with his sleeve, and pulled his black cap\'s edge lower above his eyes, to cover the sun.',
                 'Mundie: God damn it all to hell. Well, anyways, here\'s the profile of the victim. I doubt you\'ll find any correlation between the victim and the fucking fire werewolf or whatzitcalled that killed him, but maybe you can find something that points to a culprit we can actually believe exists. Feel free to write down relevant notes in it.',
-                'Jacob Jones\' profile was added to the inventory.'
             ],
-            'EVENT_TYPE': 'ITEM_FOUND',
+            'EVENT_TYPE': 'ITEM_ADDED',
+            'ITEM_ADDED_TEXT': 'Jacob Jones\' profile was added to the inventory.',
+            'ITEM_ADDED_ID': 0,
             'TEXT_SPEED': 'NORMAL'
         }
     },

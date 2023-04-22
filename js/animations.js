@@ -9,6 +9,11 @@ ANIMATIONS = {
         'LOOP': null,
         'CALLBACK': null
     },
+    'DISPLAY_ITEM_ADDED_TEXT': {
+        'STATE': 'NOT RUNNING',
+        'LOOP': null,
+        'CALLBACK': null
+    },
     'TOGGLE_MODAL': {
         'STATE': 'NOT RUNNING',
         'LOOP': null,

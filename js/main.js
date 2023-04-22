@@ -1,6 +1,8 @@
 // JS DOM ELEMENTS
 const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
     MAIN_TEXT_SECTION_COMP_STYLE = window.getComputedStyle(MAIN_TEXT_SECTION),
+    ITEM_ADDED_TEXT_SECTION = document.querySelector('#itemAddedText'),
+    ITEM_ADDED_TEXT_SECTION_COMP_STYLE = window.getComputedStyle(ITEM_ADDED_TEXT_SECTION),
 
     INPUT_SECTION = document.querySelector('#inputSection'),
     INPUT_SECTION_COMP_STYLE = window.getComputedStyle(INPUT_SECTION),
@@ -66,7 +68,9 @@ let awaitingInput = false,
     previousChoice = null,
 
     currentCursorPosition = 0,
-    playerName = [null, null];
+    playerName = [null, null],
+    
+    playerInventory = {};
                               
 // MAIN GAME EVENTS FUNCTIONS
 function startNextEvent(){
@@ -137,7 +141,30 @@ function startNextEvent(){
             clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
             logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
             ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING'
-            startInputPhase()
+
+            // Shows additional line in case of being an "item added" type of event
+            if(currentEventType == 'ITEM_ADDED'){
+
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] = 'RUNNING'
+                ITEM_ADDED_TEXT_SECTION.innerHTML = currentEvent['ITEM_ADDED_TEXT']
+                ITEM_ADDED_TEXT_SECTION.style.display = 'inline'
+                MAIN_TEXT_SECTION.append(ITEM_ADDED_TEXT_SECTION)
+
+                // Initiates fade-in animation
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['LOOP'] = setInterval(() =>
+                    ITEM_ADDED_TEXT_SECTION.style.opacity = parseFloat(ITEM_ADDED_TEXT_SECTION_COMP_STYLE.getPropertyValue('opacity')) + 0.1
+                , 20)
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['CALLBACK'] = setTimeout(() => {
+                    clearInterval(ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['LOOP']);
+                    ITEM_ADDED_TEXT_SECTION.style.opacity = 1;
+                    logText += '<span>' + currentEvent['ITEM_ADDED_TEXT'] +"</span>"
+                    ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] = 'NOT RUNNING';
+                    startInputPhase()
+                }, 200)
+            }
+            else{
+                startInputPhase()
+            }
         }
     }, TEXT_SPEEDS[currentTextSpeed] * 1000)
 
@@ -201,6 +228,18 @@ function startInputPhase(){
             }
         }, 200)
     }
+    else if (currentEventType == 'ITEM_ADDED'){
+
+        // Checks if item is stackable and already exists on the player inventory
+        if(ITEMS[currentEvent['ITEM_ADDED_ID']]['IS_STACKABLE'] && playerInventory.keys().includes(currentEvent['ITEM_ADDED_ID'])){
+            playerInventory[currentEvent['ITEM_ADDED_ID']]['QUANTITY'] += 1
+        }
+        // If not, then adds item to the inventory
+        else{
+            playerInventory[currentEvent['ITEM_ADDED_ID']] = JSON.parse(JSON.stringify(ITEMS[currentEvent['ITEM_ADDED_ID']])) // Creates deep copy of the object
+        }
+
+    }
 }
 
 // Every time the player holds "S" or press "Space/Enter"
@@ -212,15 +251,51 @@ function advanceText(){
 
             // Shows the entire text at once
             clearInterval(ANIMATIONS['DISPLAY_TEXT']['LOOP'])
-            MAIN_TEXT_SECTION.innerHTML = currentTextBlock.join('<br>')
+            MAIN_TEXT_SECTION.innerHTML = currentTextBlock.join('<br>') + '<br>'
             logText += "<span>" + currentTextBlock.join('<br>') + '</span>'
             ANIMATIONS['DISPLAY_TEXT']['STATE'] = 'NOT RUNNING';
+
+            // Shows additional line in case of being an "item added" type of event
+            if(currentEventType == 'ITEM_ADDED'){
+
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] = 'RUNNING'
+                ITEM_ADDED_TEXT_SECTION.innerHTML = currentEvent['ITEM_ADDED_TEXT']
+                ITEM_ADDED_TEXT_SECTION.style.display = 'inline'
+                MAIN_TEXT_SECTION.append(ITEM_ADDED_TEXT_SECTION)
+
+                // Initiates fade-in animation
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['LOOP'] = setInterval(() =>
+                    ITEM_ADDED_TEXT_SECTION.style.opacity = parseFloat(ITEM_ADDED_TEXT_SECTION_COMP_STYLE.getPropertyValue('opacity')) + 0.1
+                , 20)
+                ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['CALLBACK'] = setTimeout(() => {
+                    clearInterval(ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['LOOP']);
+                    ITEM_ADDED_TEXT_SECTION.style.opacity = 1;
+                    logText += '<span>' + currentEvent['ITEM_ADDED_TEXT'] +"</span>"
+                    ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] = 'NOT RUNNING';
+                    startInputPhase()
+                }, 200)
+            }
+            else{
+                startInputPhase()
+            }
+        }
+
+        // Checks if the item added line is being shown
+        else if(ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] == 'RUNNING'){
+
+            // Shows the entire text at once
+            clearInterval(ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['LOOP'])
+            ITEM_ADDED_TEXT_SECTION.style.opacity = 1
+            ITEM_ADDED_TEXT_SECTION.style.display = 'inline'
+            MAIN_TEXT_SECTION.append(ITEM_ADDED_TEXT_SECTION)
+            logText += '<span>' + currentEvent['ITEM_ADDED_TEXT'] +"</span>"
+            ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] = 'NOT RUNNING';
             startInputPhase()
 
         }
 
         // Checks if text is already full shown
-        else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING'){
+        else if(ANIMATIONS['CLEAR_TEXT']['STATE'] == 'NOT RUNNING' && ANIMATIONS['DISPLAY_ITEM_ADDED_TEXT']['STATE'] == 'NOT RUNNING'){
 
             // Starts clearing text animation
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'RUNNING'
@@ -232,12 +307,16 @@ function advanceText(){
             }, 50)
             ANIMATIONS['CLEAR_TEXT']['CALLBACK'] = setTimeout(() => {
 
-                // Upon finishing the text clearing animation, clears the input section too
+                // Upon finishing the text clearing animation, clears the input and item added sections too
                 clearInterval(ANIMATIONS['CLEAR_TEXT']['LOOP']);
                 if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){ 
                     INPUT_SECTION.style.opacity = 0.1;
                     INPUT_SECTION.style.display = 'none';
                     CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
+                }
+                if(elementIsVisible(ITEM_ADDED_TEXT_SECTION_COMP_STYLE)){
+                    ITEM_ADDED_TEXT_SECTION.style.display = 'none'
+                    ITEM_ADDED_TEXT_SECTION.style.opacity = 0
                 }
                 MAIN_TEXT_SECTION.innerHTML= '';
                 MAIN_TEXT_SECTION.style.opacity = 1;
@@ -254,13 +333,21 @@ function advanceText(){
             ANIMATIONS['CLEAR_TEXT']['STATE'] = 'NOT RUNNING';
             MAIN_TEXT_SECTION.innerHTML= '';
             MAIN_TEXT_SECTION.style.opacity = 1;
+
+            // Upon finishing the text clearing animation, clears the input and item added sections too
             if(elementIsVisible(INPUT_SECTION_COMP_STYLE)){
                 INPUT_SECTION.style.opacity = 0.1;
                 INPUT_SECTION.style.display = 'none';
                 CHOICE_BUTTONS[currentChoice]['ELEMENT'].style.display = 'none'
             }
+            if(elementIsVisible(ITEM_ADDED_TEXT_SECTION_COMP_STYLE)) {
+                ITEM_ADDED_TEXT_SECTION.style.display = 'none'
+                ITEM_ADDED_TEXT_SECTION.style.opacity = 0
+            }
+
             startNextEvent();
         }
+
     }
 }
 
@@ -600,7 +687,6 @@ CHOICE_BUTTONS.forEach((buttonClicked, indexClickedButton) => {
             // Adds choice to the choice route
             choiceRoute.push(currentChoice)
         }
-        console.log(choiceRoute)
         
         // Clears input section excluding the actual choice
         CHOICE_BUTTONS.forEach((button, index) => {
