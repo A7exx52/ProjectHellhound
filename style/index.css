@@ -5,7 +5,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Nanum Gothic Coding';/
+    font-family: 'Nanum Gothic Coding';
 }
 
 /* ============ Scrollbar ============ */
@@ -45,7 +45,7 @@ main{
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    padding: 40px;
+    padding: 2.5rem;
     height: 80%;
     width: 100%;
     color: #c1a715;
@@ -90,18 +90,23 @@ main{
     padding: 0;
     margin: 0;
     border-bottom: solid #c1a715 0.2rem;
-    border-left: solid black 1px;
+    border-left: solid black 0.1rem;
 }
 /* =================================== */
 
 
 footer{
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-around;
     height: 20%;
     width: 100%;
-    padding: 0 40px 40px 40px;
+    background-color: rgb(15, 15, 15);
+}
+
+footer>*{
+    padding: 0 2rem 4.9rem 2rem;
+    width: 100%;
 }
 
 
@@ -144,8 +149,8 @@ button:hover, button:focus{
     background-color: black;
     opacity: 0;
     color: white;
-    border: solid white 3px;
-    border-radius: 20px;
+    border: solid white 0.2rem;
+    border-radius: 1.2rem;
     height: 80%;
     width: 50%;
     z-index: 3;
@@ -164,12 +169,13 @@ button:hover, button:focus{
 }
 #menuModalMain{
     display: flex;
+    overflow-y: scroll;
     flex-direction: column;
     gap: .75rem;
     line-height: 3rem;
     padding: 1rem;
     font-size: 1.5rem;
-    border: solid gray 1px;
+    border: solid gray 0.1rem;
     height: 90%;
 }
 
@@ -179,8 +185,8 @@ button:hover, button:focus{
     background-color: black;
     opacity: 0;
     color: white;
-    border: solid white 3px;
-    border-radius: 20px;
+    border: solid white 0.2rem;
+    border-radius: 1.1rem;
     height: 30%;
     width: 40%;
     z-index: 3;
@@ -203,5 +209,52 @@ button:hover, button:focus{
     width: 100%;
     justify-content: space-around;
     align-items: center;
+}
+/* =================================== */
+
+/* ======== Inventory Menu =========== */
+#inventoryContainer{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 0 4.9rem 0;
+}
+#inventoryButton{
+    padding-top: 2.3rem;
+    width: 100%;
+}
+#inventoryMenu{
+    border-radius: 1rem;
+    display: none;
+    padding: 2rem 2rem 0 2rem;
+    background-color: rgb(15, 15, 15);
+    height: 30rem;
+    width: 75%;
+    overflow-y: hidden;
+}
+#inventoryMenuText{
+    overflow-y: hidden;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: .75rem;
+    padding: 1rem;
+    font-size: 1rem;
+    line-height: 1rem;
+    border: solid gray 0.1rem;
+    height: 90%;
+    color: white;
+}
+#inventoryMenuText>*{
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+.itemIcon{
+    color: white;
+    font-size: 1rem;
 }
 /* =================================== */

@@ -32,6 +32,11 @@ const MAIN_TEXT_SECTION = document.querySelector('#textSection'),
 
     LOG_BUTTON = document.querySelector('#logButton'),
     OPTIONS_BUTTON = document.querySelector('#optionsButton'),
+    
+    INVENTORY_BUTTON = document.querySelector('#inventoryButton'),
+    INVENTORY_MENU = document.querySelector('#inventoryMenu'),
+    INVENTORY_MENU_COMP_STYLE = window.getComputedStyle(INVENTORY_MENU),
+    INVENTORY_MENU_TEXT = document.querySelector('#inventoryMenuText'),
 
     TEXT_SPEEDS = {
         'NORMAL': 0.030,
@@ -237,6 +242,12 @@ function startInputPhase(){
         // If not, then adds item to the inventory
         else{
             playerInventory[currentEvent['ITEM_ADDED_ID']] = JSON.parse(JSON.stringify(ITEMS[currentEvent['ITEM_ADDED_ID']])) // Creates deep copy of the object
+            if(INVENTORY_MENU_TEXT.innerHTML.includes('-- Empty Inventory --')) INVENTORY_MENU_TEXT.innerHTML = ''
+            INVENTORY_MENU_TEXT.insertAdjacentHTML('beforeend', 
+                `<button class="itemButton" itemId="${currentEvent['ITEM_ADDED_ID']}" title="${ITEMS[currentEvent['ITEM_ADDED_ID']]['DESCRIPTION']}">` +
+                    `<i class="itemIcon ${ITEMS[currentEvent['ITEM_ADDED_ID']]['ICON']}"></i>` +
+                    `- ${ITEMS[currentEvent['ITEM_ADDED_ID']]['NAME']}`+
+                `</button>`)
         }
 
     }
@@ -352,25 +363,37 @@ function advanceText(){
 }
 
 // ANIMATION FUNCTIONS
-function toggleModal(modalType, menuType = null){
+function toggleModal(modalType, menuType = null, itemId = null){
     if(ANIMATIONS['TOGGLE_MODAL']['STATE'] == 'NOT RUNNING' && !anyOtherModalIsVisible(modalType)){
         ANIMATIONS['TOGGLE_MODAL']['STATE'] = 'RUNNING'
         if(MODALS[modalType]['COMPSTYLE'].getPropertyValue('display') == 'none'){
             if(modalType == 'MENU'){
-                MODALS[modalType]['HEADER'].innerHTML = menuType.charAt(0) + menuType.slice(1).toLowerCase();
-                MODALS[modalType]['MAIN'].innerHTML = '';
-                if(menuType == "LOG"){
-                    if (logText.length >= 1){
-                        MODALS[modalType]['MAIN'].innerHTML = logText
-                        MODALS[modalType]['MAIN'].style.overflowY = "scroll";
-                    }
-                    else{
-                        MODALS[modalType]['MAIN'].innerHTML = '';
-                    }
+                if(menuType == 'LOG' || menuType == 'OPTIONS') MODALS[modalType]['HEADER'].innerHTML = menuType.charAt(0) + menuType.slice(1).toLowerCase();
+                switch(menuType){
+                    case 'LOG':
+                        if (logText.length >= 1){
+                            MODALS[modalType]['MAIN'].innerHTML = logText
+                        }
+                        else{
+                            MODALS[modalType]['MAIN'].innerHTML = '-- Empty Log --';
+                        }
+                        break;
+                    case 'ITEM':
+                        MODALS[modalType]['HEADER'].innerHTML = ITEMS[itemId]['NAME']
+                        MODALS[modalType]['MAIN'].innerHTML = ITEMS[itemId]['CONTENT'].replaceAll('\n', '<br>')
+                        break
                 }
             }
             MODAL_BG.style.display = 'block';
             MODALS[modalType]['ELEMENT'].style.display = 'flex';
+            if(modalType == 'MENU'){
+                if(menuType == 'LOG'){
+                    MODALS[modalType]['MAIN'].scrollTop = MODALS[modalType]['MAIN'].scrollHeight
+                }
+                else{
+                    MODALS[modalType]['MAIN'].scrollTop = 0
+                }
+            }
             let cleanIntervalLoop = setInterval(function(){
                 MODALS[modalType]['ELEMENT'].style.opacity = parseFloat(MODALS[modalType]['COMPSTYLE'].getPropertyValue('opacity')) + 0.1; 
             }, 15)
@@ -536,7 +559,10 @@ reachedInfoAnswerLastEvent = () => {
 currentEventHasChoices = () => currentEvent.hasOwnProperty('CHOICES') || reachedInfoAnswerLastEvent()
 
 // JS EVENTS
-MAIN_TEXT_SECTION.addEventListener('click', () => advanceText());
+document.querySelector('main').addEventListener('click', () => {
+    if(elementIsVisible(INVENTORY_MENU_COMP_STYLE)) INVENTORY_MENU.style.display = 'none'
+    advanceText()
+});
 
 window.addEventListener('keyup', function(e){
 
@@ -628,8 +654,9 @@ window.addEventListener('keydown', function(e){
 });
 
 LOG_BUTTON.addEventListener("click", () => toggleModal('MENU', 'LOG'))
-
 OPTIONS_BUTTON.addEventListener("click", () => toggleModal('MENU', 'OPTIONS'))
+
+INVENTORY_BUTTON.addEventListener("click", () => INVENTORY_MENU.style.display = elementIsVisible(INVENTORY_MENU_COMP_STYLE) ? 'none' : 'block')
 
 MODAL_BG.addEventListener("click", () => toggleModal(modalActive))
 
@@ -696,6 +723,15 @@ CHOICE_BUTTONS.forEach((buttonClicked, indexClickedButton) => {
         })
         advanceText()
     })
+})
+
+document.body.addEventListener("click", function(e){
+    if(e.target.classList.contains('itemButton')){
+        let itemId = e.target.getAttribute('itemId')
+        if(ITEMS[itemId]['USAGE_TYPE'] == 'READABLE'){
+            toggleModal('MENU', 'ITEM', itemId)
+        }
+    }
 })
 
 startNextEvent()
